@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html >
+<script>
+      var score=0;
+    function start_game(){ 
+        document.getElementById("score").innerHTML="score:"+score;
+        var list=new Array();
+        list=JSON.parse(sessionStorage.getItem("list"));
+        var x=list[0];
+        document.getElementById("c1").innerHTML=x;
+        if(list.length>=2){
+            var x=list[1];
+            document.getElementById("c2").innerHTML=x;
+        }
+        if(list.length>=3){
+            var x=list[2];
+            document.getElementById("c3").innerHTML=x;
+        }
+    }
+    function check_score(){
+      score+=5;
+      document.getElementById("score").innerHTML="score:"+score;
+    }
+</script>
+<title>Scattergories</title>
+<body style="text-align: center;" onload="start_game()">
+<h1 id="score" style="text-align: center;"></h1>
+<table style="width:100%">
+    <tr>
+        <th id="c1"><ins>Firstname</ins></th>
+        <th id="c2"><ins>Lastname</ins></th>
+        <th id="c3"><ins>Age</ins></th>
+    </tr>
+    <tr>
+       <th><input type="text"></th> 
+       <th><input type="text"></th> 
+       <th><input type="text"></th> 
+    </tr>
+</table>
+<br>
+<input style="margin: auto;" type="submit" name="submit" value="submit" onclick="check_score()">
+</body>
+</html>
