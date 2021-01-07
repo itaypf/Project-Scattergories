@@ -1,25 +1,27 @@
-<?php
-  session_start();
-  $points=0;
-  if(isset($_SESSION['points']))
-  {
-    $points=$_SESSION['points'];
-  }
-?>
 <!DOCTYPE html>
 <html>
+  <script src="/socket.io/socket.io.js"></script>
 <script>
+  var socket=io();
     var list=new Array();
     list=JSON.parse(sessionStorage.getItem("list"));
+    var name=JSON.parse(sessionStorage.getItem("name"));
+    socket.emit('name',{
+      input:name
+    });
+    var num=0;
+    var stop=0;
+    var score;
     function start_game(){ 
-      var score=0;
-      score+=<?php echo $points?>;
+     
+      score=0;
       var form = document.getElementsByTagName('form')[0];
         document.getElementById("score").innerHTML="score:"+score;
         tableCreate(list);
         var sub=document.createElement("input");
-        sub.setAttribute('type','submit');
+        sub.setAttribute('type','button');
         sub.setAttribute('value','submit');
+        sub.setAttribute('onclick','return check_input()');
         sub.setAttribute('style','margin-top:20px;');
         form.appendChild(sub);
         
@@ -59,24 +61,29 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 async function roll(x){
+  stop=0;
   var time=document.getElementById('time');
   var div=document.getElementById('letter');
   var num=Math.round((Math.random()*25)+65);
-  
-  num=String.fromCharCode(num);
-  div.innerHTML=num;
-  document.getElementById('sbut').setAttribute('onclick','');
+    num=String.fromCharCode(num);
+    div.innerHTML=num;
+    document.getElementById('sbut').setAttribute('onclick','');
   var i=120;
   while(i>0){
     i--;
     await sleep(1000);
     time.innerHTML=i;
+    if(stop==-1){
+      time.innerHTML=120;
+      return;
+    }
   }
-  document.getElementById('myform').submit();
+    document.getElementById('myform').submit();
 }
 
 function check_input(){
   var v=new Array();
+  var input=new Array();
   var letter=document.getElementById('letter').innerHTML.toLowerCase();
   for(var i=0;i<list.length;i++)
   {
@@ -86,8 +93,29 @@ function check_input(){
       document.getElementById('report').innerHTML="input doesnt match letter";
       return false;
     }
+    input.push(v[i].value);
+    v[i].value="";
   }
+  socket.emit('input',{
+    categories:list,
+    input:input
+  });
+  reset_game();
   return true;
+}
+
+function reset_game(){
+  stop=-1;
+  document.getElementById('sbut').setAttribute('onclick','roll()');
+  socket.on('points',function(data){//insert the points u got from the query
+        num=data.amount;
+  });
+  score+=num;
+  document.getElementById('letter').innerHTML="A";
+  update_score();
+}
+function update_score(){
+  document.getElementById("score").innerHTML="score:"+score;
 }
 </script>
 <title >Scattergories</title>
@@ -98,7 +126,7 @@ function check_input(){
 <div id='letter' style="font-size:250%;">A</div>
 <input id="sbut" type="submit" value="roll" style="margin-bottom:20px;" onclick="roll()" on>
 <br>
-<form id="myform" action="search.php" method="POST" onsubmit="return check_input()">
+<form id="myform" action="/client/scattergories.html" method="GET">
 </form>
 <div id="report" style="color: red;"></div>
 </body>

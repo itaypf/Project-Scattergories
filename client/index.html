@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <title>Lets play a game</title>
-<script  type="text/javascript">
+<script>
     function myfunc(){
         var list=new Array();
         if(document.getElementById('option1').checked)
@@ -19,7 +19,13 @@
             return false;
         }
         else{
+            var input=document.getElementById('name').value;
+            if(input.length<1){
+                document.getElementById("demo").innerHTML="please enter your name";
+                return false;
+            }
             sessionStorage.setItem("list", JSON.stringify(list));
+            sessionStorage.setItem("name", JSON.stringify(input));
             return true;
         }
     }
@@ -28,8 +34,10 @@
 <h1><ins>Welcome lets play some... </ins></h1>
 <h2><ins>Scattergories </ins></h2>
 <div id="newGAME">
+    <form action="/client/scattergories.html" method="GET" onsubmit="return myfunc();">
+    <input type="text" placeholder="enter your name" id="name">
+    <br>
     <h3>select the categories you want to play for</h3>
-    <form action="Scattergories.php" method="post" onsubmit="return myfunc();">
     <input type="checkbox" id="option1" name="option1" value="countries">
     <label for="option1">countries</label>
     <input type="checkbox" id="option2" name="option2" value="cities">
@@ -41,7 +49,8 @@
     <input type="checkbox" id="option5" name="option5" value="fruits&vegtables">
     <label for="option5">fruits & vegtables</label>
     <br>
-    <input type="submit" value="start game" style="margin-top: 20px;">
+   
+    <input type="submit" value="start game">
 </form>
 <p id="demo" style="color: red;"></p>
 </div>
