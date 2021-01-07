@@ -103,16 +103,15 @@ function check_input(){
   reset_game();
   return true;
 }
-
+socket.on('points',function(data){//insert the points u got from the query
+        score+=data.amount;
+        update_score();
+  });
 function reset_game(){
   stop=-1;
   document.getElementById('sbut').setAttribute('onclick','roll()');
-  socket.on('points',function(data){//insert the points u got from the query
-        num=data.amount;
-  });
-  score+=num;
+  
   document.getElementById('letter').innerHTML="A";
-  update_score();
 }
 function update_score(){
   document.getElementById("score").innerHTML="score:"+score;
