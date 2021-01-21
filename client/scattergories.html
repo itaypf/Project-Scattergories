@@ -1,30 +1,77 @@
 <!DOCTYPE html>
 <html>
+  
   <script src="/socket.io/socket.io.js"></script>
 <script>
-  var socket=io();
+  const socket=io.connect("http://localhost:8080")
     var list=new Array();
     list=JSON.parse(sessionStorage.getItem("list"));
+    var id=JSON.parse(sessionStorage.getItem("id"));
     var name=JSON.parse(sessionStorage.getItem("name"));
-    socket.emit('name',{
-      input:name
-    });
-    var num=0;
+    if(list!=null)
+    {
+      socket.emit("createRoom",{
+        input:id,
+        categories:list,
+        name:name
+      })
+    }
+    else{
+      socket.emit("joinRoom",{
+        input:id,
+        name:name
+      });
+  }
     var stop=0;
     var score;
-    function start_game(){ 
-     
+    function wait(num){
+      var score=document.getElementById('score');
+      score.innerHTML="waiting for host to start game";
+      document.getElementById('players').innerHTML=name+":0";
+      if(num==0){//creating start game button only for host
+        var bdy=document.getElementById('bdy');
+        var button=document.createElement("button");
+        button.setAttribute('type','button');
+        button.setAttribute('onclick','begin()');
+        button.innerHTML="start game";
+        button.setAttribute('id','startGame');
+        bdy.appendChild(button);
+      }
+    }
+    function begin(){
+      socket.emit("begin",{
+        room:id,
+        num:1
+      });
+      start_game(0);
+    }
+    function start_game(num){ 
+      var bdy=document.getElementById('bdy');
+      
+      if(num==0){//creating roll button only for host
+        bdy.removeChild(document.getElementById('startGame'));
+        var roll=document.createElement("input");
+        roll.setAttribute('type','button');
+        roll.setAttribute('value','roll');
+        roll.setAttribute('onclick','roll(0)');
+        roll.setAttribute('id','sbut');
+        roll.setAttribute('style','margin-bottom:20px;')
+        document.getElementById("rollButton").appendChild(roll);
+      }
+      var time=document.getElementById('time')
+      time.innerHTML="120";
       score=0;
       var form = document.getElementsByTagName('form')[0];
         document.getElementById("score").innerHTML="score:"+score;
-        tableCreate(list);
-        var sub=document.createElement("input");
-        sub.setAttribute('type','button');
-        sub.setAttribute('value','submit');
-        sub.setAttribute('onclick','return check_input()');
-        sub.setAttribute('style','margin-top:20px;');
-        form.appendChild(sub);
-        
+        if(list!=null){
+          tableCreate(list);
+          var sub=document.createElement("input");
+          sub.setAttribute('type','button');
+          sub.setAttribute('value','submit');
+          sub.setAttribute('onclick','return check_input()');
+          sub.setAttribute('style','margin-top:20px;');
+          form.appendChild(sub);
+        }
     }
     function tableCreate(x) {
       var form = document.getElementsByTagName('form')[0];
@@ -60,14 +107,25 @@ function create_input(list,num){
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
-async function roll(x){
+async function roll(x,letter){
   stop=0;
   var time=document.getElementById('time');
   var div=document.getElementById('letter');
-  var num=Math.round((Math.random()*25)+65);
+  if(x==0){
+    var num=Math.round((Math.random()*25)+65);
     num=String.fromCharCode(num);
     div.innerHTML=num;
+    socket.emit("roll",{
+      room:id,
+      num:1,
+      letter:num
+    });
     document.getElementById('sbut').setAttribute('onclick','');
+  }
+  else
+  {
+    div.innerHTML=letter
+  }
   var i=120;
   while(i>0){
     i--;
@@ -78,7 +136,7 @@ async function roll(x){
       return;
     }
   }
-    document.getElementById('myform').submit();
+    check_input();
 }
 
 function check_input(){
@@ -109,24 +167,89 @@ socket.on('points',function(data){//insert the points u got from the query
   });
 function reset_game(){
   stop=-1;
-  document.getElementById('sbut').setAttribute('onclick','roll()');
+  document.getElementById('sbut').setAttribute('onclick','roll(0)');
   
   document.getElementById('letter').innerHTML="A";
 }
 function update_score(){
   document.getElementById("score").innerHTML="score:"+score;
 }
+socket.on("created",function(data){
+  wait(data.num);
+});
+socket.on("playerJoined",async function(data){
+  var names=JSON.stringify(data.players);
+  names=names.replace('{','');
+  names=names.replace('}','');
+  while(names.indexOf('"')!=-1)
+  {
+    names=names.replace('"','');
+  }
+  while(names.indexOf(',')!=-1)
+  {
+    names=names.replace(',','<br />');
+  }
+  document.getElementById('players').innerHTML=names
+  document.getElementById('report').style.color="green";
+  document.getElementById('report').innerHTML="player "+data.name+" joined";
+  await sleep(3000);
+  document.getElementById('report').innerHTML="";
+  document.getElementById('report').style.color="red";
+});
+socket.on("success",(data)=>{
+  wait(data.num);
+  list=data.categories;
+  var names=JSON.stringify(data.players);
+  names=names.replace('{','');
+  names=names.replace('}','');
+  while(names.indexOf('"')!=-1)
+  {
+    names=names.replace('"','');
+  }
+  while(names.indexOf(',')!=-1)
+  {
+    names=names.replace(',','<br />');
+  }
+  document.getElementById('players').innerHTML=names
+
+});
+socket.on("playerLeft",async function(data){
+  var names=JSON.stringify(data.players);
+  names=names.replace('{','');
+  names=names.replace('}','');
+  while(names.indexOf('"')!=-1)
+  {
+    names=names.replace('"','');
+  }
+  while(names.indexOf(',')!=-1)
+  {
+    names=names.replace(',','<br />');
+  }
+  document.getElementById('players').innerHTML=names
+  document.getElementById('report').innerHTML="player "+data.name+" left"
+  await sleep(3000);
+  document.getElementById('report').innerHTML="";
+});
+socket.on("begin",function(data){
+  start_game(data.num);
+});
+socket.on("roll",function(data){//problem:not recieving this
+  roll(data.num,data.letter);
+});
 </script>
 <title >Scattergories</title>
-<body id="bdy" style="text-align: center;" onload="start_game()">
+<body id="bdy" style="text-align: center;">
 <h1 id="score" style="font-size:300%;" ></h1>
 <br>
-<div id="time" style="font-size: 250%; text-align: left;">120</div>
+<div style="position: absolute;"></div>
+<div id="players" style="font-size: 100%; text-align: left;"></div>
+<div id="time" style="font-size: 250%; text-align: left;"></div>
 <div id='letter' style="font-size:250%;">A</div>
-<input id="sbut" type="submit" value="roll" style="margin-bottom:20px;" onclick="roll()" on>
 <br>
+<div id="rollButton"></div>
 <form id="myform" action="/client/scattergories.html" method="GET">
 </form>
 <div id="report" style="color: red;"></div>
+<br>
 </body>
 </html>
