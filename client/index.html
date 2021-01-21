@@ -3,6 +3,8 @@
 <title>Lets play a game</title>
 <script>
     function myfunc(){
+        var input=document.getElementById('roomId').value;
+        var name=document.getElementById('name').value;
         var list=new Array();
         if(document.getElementById('option1').checked)
            list.push(document.getElementById('option1').value);
@@ -14,30 +16,42 @@
             list.push(document.getElementById('option4').value);
         if(document.getElementById('option5').checked)
             list.push(document.getElementById('option5').value);
-        if(list.length<1){
-            document.getElementById("demo").innerHTML="you must select at least 1 category";
+        if(list.length<1&&input.length<1){
+            document.getElementById("demo").innerHTML="you must select at least 1 category or enter room name";
             return false;
         }
-        else{
-            var input=document.getElementById('name').value;
-            if(input.length<1){
-                document.getElementById("demo").innerHTML="please enter your name";
-                return false;
-            }
-            sessionStorage.setItem("list", JSON.stringify(list));
-            sessionStorage.setItem("name", JSON.stringify(input));
-            return true;
+        if(list.length<1&&input.length<1){
+            document.getElementById("demo").innerHTML="please enter room name";
+            return false;
         }
+        if(name.length<1)
+        {
+            document.getElementById("demo").innerHTML="you must enter a name for yourself";
+            return false;
+        }
+        if(list.length>0)
+            sessionStorage.setItem("list", JSON.stringify(list));
+        if(input.length>0)
+            sessionStorage.setItem("id", JSON.stringify(input));
+        sessionStorage.setItem("name", JSON.stringify(name));
+        return true;
     }
+    
 </script>
 <body style="background-color: cyan; text-align: center;">
 <h1><ins>Welcome lets play some... </ins></h1>
 <h2><ins>Scattergories </ins></h2>
 <div id="newGAME">
     <form action="/client/scattergories.html" method="GET" onsubmit="return myfunc();">
-    <input type="text" placeholder="enter your name" id="name">
+        <h3>enter your nickname</h3>
+    <input type="text" placeholder="enter nickname" id="name">
     <br>
-    <h3>select the categories you want to play for</h3>
+    <br>
+    <input type="text" placeholder="enter room name" id="roomId">
+    <button onclick="return search()">join room</button>
+    <br>
+    <h2>Or</h2>
+    <h3>select the categories you want to play for and create game</h3>
     <input type="checkbox" id="option1" name="option1" value="countries">
     <label for="option1">countries</label>
     <input type="checkbox" id="option2" name="option2" value="cities">
@@ -50,7 +64,7 @@
     <label for="option5">fruits & vegtables</label>
     <br>
    
-    <input type="submit" value="start game">
+    <input type="submit" value="create game">
 </form>
 <p id="demo" style="color: red;"></p>
 </div>

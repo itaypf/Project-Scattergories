@@ -4,8 +4,10 @@ var fs=require('fs');
 var app=express();
 var server=require('http').Server(app);
 var mysql=require('mysql');
+const { userInfo } = require('os');
 const { resolve } = require('path');
 var SqlString = require('sqlstring');
+var io=require('socket.io')(server,{})
 var con = mysql.createConnection({
   host: "localhost",
   user: "root",
@@ -22,22 +24,94 @@ app.get('/',function(req,res){
 app.use('/client',express.static(__dirname+'/client'));
 server.listen(8080);
 console.log("server started");
+var id="";
+var place=0;
+var rooms={};
 var socket_list={};
-var io=require('socket.io')(server,{})
 io.sockets.on('connection',function(socket){
+    
     socket.id=Math.random();
-    socket.score=0;
     socket.categories=[];
     socket.input=[];
-    console.log(socket.id);
     socket_list[socket.id]=socket;
-    console.log('socket connection');
-    socket.on('name',function(data){
-        console.log(data);
-        fs.appendFile('players.txt',data.input+"=0\n",function(err){
-            if (err) throw err;
-            console.log("saved");
+    socket.on("createRoom",function(data){
+        var room={};
+        room.players={};
+        room.sockets=[];
+        room.id=data.input;
+        room.categories=data.categories
+        socket.nickname=data.name
+        room.players[socket.nickname]="0";
+        room.sockets.push(socket);
+        rooms[place]=room;
+        place++;
+        socket.join(room.id);
+        var clientsList = io.sockets.adapter.rooms;
+        console.log(clientsList);
+        socket.emit("created",{
+            num:0
         });
+    });
+    socket.on("joinRoom",function(data){
+        id=data.input;
+        socket.nickname=data.name;
+        for (i=0;i<place;i++){
+            if(id===rooms[i].id){
+                socket.join(id);
+                rooms[i].players[socket.nickname]="0";
+                rooms[i].sockets.push(socket);
+                console.log(rooms[i].sockets);
+                for(j=0;j<rooms[i].sockets.length;j++)
+                {
+                    if(rooms[i].sockets[j].id!=socket.id){
+                        rooms[i].sockets[j].emit("playerJoined",{
+                            players:rooms[i].players,
+                            name:socket.nickname
+                        });
+                    }
+                }
+                var clientsList = io.sockets.adapter.rooms;
+                console.log(clientsList);
+                return socket.emit("success",{
+                    categories:rooms[i].categories,
+                    players:rooms[i].players,
+                    num:1
+                });
+            }
+        }  
+    });
+    console.log(rooms);
+    console.log('socket connection');
+    socket.on("begin",function(data){
+        for(i=0;i<place;i++)
+        {
+            if(rooms[i].id===data.room)
+            {
+                for(j=0;j<rooms[i].sockets.length;j++)
+                {
+                    if(rooms[i].sockets[j].nickname!==socket.nickname)
+                        rooms[i].sockets[j].emit("begin",{
+                            num:data.num
+                        });
+                }
+            }
+        }
+    });
+    socket.on("roll",function(data){
+        for(i=0;i<place;i++)
+        {
+            if(rooms[i].id===data.room)
+            {
+                for(j=0;j<rooms[i].sockets.length;j++)
+                {
+                    if(rooms[i].sockets[j].nickname!==socket.nickname)
+                        rooms[i].sockets[j].emit("roll",{
+                            num:data.num,
+                            letter:data.letter
+                        });
+                }
+            }
+        }
     });
     socket.on('input',function(data){
        socket_list[socket.id].categories=data.categories;
@@ -54,9 +128,29 @@ io.sockets.on('connection',function(socket){
     });
     socket.on('disconnect',function(reason){
         console.log('a user disconnected beacuse '+reason);
+        for(i=0;i<place;i++){
+            for(j=0;j<rooms[i].sockets.length;j++)
+            {
+                if(rooms[i].sockets[j].id==socket.id){
+                    var nickname=socket.nickname;
+                    delete rooms[i].players[socket.nickname];
+                    rooms[i].sockets.pop(socket);
+                    emitDisconnection(nickname,rooms[i]);
+                    break;
+                }
+            }
+        }
         delete socket_list[socket.id];
     });
 });
+function emitDisconnection(name,room){
+    for(i=0;i<room.sockets.length;i++){
+        room.sockets[i].emit("playerLeft",{
+            name:name,
+            players:room.players
+        });
+    }
+}
 function getResult(category,input){
     return new Promise((resolve,reject)=>   {
     var sql=SqlString.format('SELECT * FROM ?? WHERE name = ?', [category,input]);
