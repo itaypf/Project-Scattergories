@@ -8,6 +8,7 @@
     list=JSON.parse(sessionStorage.getItem("list"));
     var id=JSON.parse(sessionStorage.getItem("id"));
     var name=JSON.parse(sessionStorage.getItem("name"));
+    var Pstatus={};
     if(list!=null)
     {
       socket.emit("createRoom",{
@@ -69,6 +70,7 @@
           sub.setAttribute('type','button');
           sub.setAttribute('value','submit');
           sub.setAttribute('onclick','return check_input()');
+          sub.setAttribute('id','submitBut');
           sub.setAttribute('style','margin-top:20px;');
           form.appendChild(sub);
         }
@@ -112,13 +114,25 @@ async function roll(x,letter){
   var time=document.getElementById('time');
   var div=document.getElementById('letter');
   if(x==0){
+    for(var key in Pstatus)
+    {
+      if(Pstatus[key]==0){
+        alert("pls wait for everyone to finish submiting");
+        return;
+      }
+    }
+    for(var key in Pstatus)
+    {
+      Pstatus[key]=0;
+    }
     var num=Math.round((Math.random()*25)+65);
     num=String.fromCharCode(num);
     div.innerHTML=num;
     socket.emit("roll",{
       room:id,
       num:1,
-      letter:num
+      letter:num,
+      status:Pstatus
     });
     document.getElementById('sbut').setAttribute('onclick','');
   }
@@ -126,6 +140,7 @@ async function roll(x,letter){
   {
     div.innerHTML=letter
   }
+  document.getElementById('submitBut').setAttribute('onclick','return check_input()');
   var i=120;
   while(i>0){
     i--;
@@ -137,6 +152,7 @@ async function roll(x,letter){
     }
   }
     check_input();
+    reset_game();
 }
 
 function check_input(){
@@ -156,14 +172,20 @@ function check_input(){
   }
   socket.emit('input',{
     categories:list,
-    input:input
+    input:input,
   });
+  document.getElementById('submitBut').setAttribute('onclick','alert("pls wait for host to roll again");')
   reset_game();
   return true;
 }
 socket.on('points',function(data){//insert the points u got from the query
         score+=data.amount;
         update_score();
+        socket.emit("update",{
+          id:id,
+          num:data.amount,
+          name:name
+        });
   });
 function reset_game(){
   stop=-1;
@@ -175,9 +197,11 @@ function update_score(){
   document.getElementById("score").innerHTML="score:"+score;
 }
 socket.on("created",function(data){
+  Pstatus=data.status;//dictionary of player status(to check if the host can roll again)
   wait(data.num);
 });
 socket.on("playerJoined",async function(data){
+  Pstatus=data.status;
   var names=JSON.stringify(data.players);
   names=names.replace('{','');
   names=names.replace('}','');
@@ -214,6 +238,7 @@ socket.on("success",(data)=>{
 
 });
 socket.on("playerLeft",async function(data){
+  Pstatus=data.status;
   var names=JSON.stringify(data.players);
   names=names.replace('{','');
   names=names.replace('}','');
@@ -225,16 +250,31 @@ socket.on("playerLeft",async function(data){
   {
     names=names.replace(',','<br />');
   }
-  document.getElementById('players').innerHTML=names
-  document.getElementById('report').innerHTML="player "+data.name+" left"
+  document.getElementById('players').innerHTML=names;
+  document.getElementById('report').innerHTML="player "+data.name+" left";
   await sleep(3000);
   document.getElementById('report').innerHTML="";
 });
 socket.on("begin",function(data){
   start_game(data.num);
 });
-socket.on("roll",function(data){//problem:not recieving this
+socket.on("roll",function(data){
   roll(data.num,data.letter);
+});
+socket.on("scoreboard",function(data){
+  Pstatus=data.status;
+  var names=JSON.stringify(data.players);
+  names=names.replace('{','');
+  names=names.replace('}','');
+  while(names.indexOf('"')!=-1)
+  {
+    names=names.replace('"','');
+  }
+  while(names.indexOf(',')!=-1)
+  {
+    names=names.replace(',','<br />');
+  }
+  document.getElementById('players').innerHTML=names;
 });
 </script>
 <title >Scattergories</title>
