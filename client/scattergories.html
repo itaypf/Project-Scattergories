@@ -196,9 +196,21 @@ function reset_game(){
 function update_score(){
   document.getElementById("score").innerHTML="score:"+score;
 }
+socket.on("roomExists",function(data){
+  alert("the room '"+id+"' already exists you may join it or create a diffrent room");
+  window.location.pathname ='/';
+});
 socket.on("created",function(data){
   Pstatus=data.status;//dictionary of player status(to check if the host can roll again)
   wait(data.num);
+});
+socket.on("exists",function(data){
+  alert("the name '"+name+"' already exists in this room pls choose another");
+  window.location.pathname ='/';
+});
+socket.on("notFound",function(data){
+  alert("no room with the name "+id+" exists");
+  window.location.pathname ='/';
 });
 socket.on("playerJoined",async function(data){
   Pstatus=data.status;
@@ -282,7 +294,7 @@ socket.on("scoreboard",function(data){
 <h1 id="score" style="font-size:300%;" ></h1>
 <br>
 <div style="position: absolute;"></div>
-<div id="players" style="font-size: 100%; text-align: left;"></div>
+<div id="players" style="font-size: 150%; text-align: left;"></div>
 <div id="time" style="font-size: 250%; text-align: left;"></div>
 <div id='letter' style="font-size:250%;">A</div>
 <br>

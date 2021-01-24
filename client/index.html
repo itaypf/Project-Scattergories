@@ -16,11 +16,11 @@
             list.push(document.getElementById('option4').value);
         if(document.getElementById('option5').checked)
             list.push(document.getElementById('option5').value);
-        if(list.length<1&&input.length<1){
-            document.getElementById("demo").innerHTML="you must select at least 1 category or enter room name";
+        if(list.length<1){
+            document.getElementById("demo").innerHTML="you must select at least 1 category";
             return false;
         }
-        if(list.length<1&&input.length<1){
+        if(input.length<1){
             document.getElementById("demo").innerHTML="please enter room name";
             return false;
         }
@@ -36,13 +36,29 @@
         sessionStorage.setItem("name", JSON.stringify(name));
         return true;
     }
+    function search(){
+        var input=document.getElementById('roomId').value;
+        var name=document.getElementById('name').value;
+        if(input.length<1){
+            document.getElementById("demo").innerHTML="please enter room name";
+            return false;
+        }
+        if(name.length<1)
+        {
+            document.getElementById("demo").innerHTML="you must enter a name for yourself";
+            return false;
+        }
+        sessionStorage.setItem("id", JSON.stringify(input));
+        sessionStorage.setItem("name", JSON.stringify(name));
+        sessionStorage.removeItem("list");
+    }
     
 </script>
 <body style="background-color: cyan; text-align: center;">
 <h1><ins>Welcome lets play some... </ins></h1>
 <h2><ins>Scattergories </ins></h2>
 <div id="newGAME">
-    <form action="/client/scattergories.html" method="GET" onsubmit="return myfunc();">
+    <form action="/client/scattergories.html" method="GET">
         <h3>enter your nickname</h3>
     <input type="text" placeholder="enter nickname" id="name">
     <br>
@@ -64,7 +80,7 @@
     <label for="option5">fruits & vegtables</label>
     <br>
    
-    <input type="submit" value="create game">
+    <input type="submit" value="create game" onclick="return myfunc()">
 </form>
 <p id="demo" style="color: red;"></p>
 </div>

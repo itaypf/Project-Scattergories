@@ -36,6 +36,12 @@ io.sockets.on('connection',function(socket){
     socket.input=[];
     socket_list[socket.id]=socket;
     socket.on("createRoom",function(data){
+        for(i=0;i<place;i++){
+            if(rooms[i].id===data.input){
+                socket.emit("roomExists");
+                return;
+            }
+        }
         var room={};
         room.players={};
         room.sockets=[];
@@ -59,9 +65,16 @@ io.sockets.on('connection',function(socket){
     socket.on("joinRoom",function(data){//when a player joins update the player list for all players
         //and inform them that a player joined
         id=data.input;
-        socket.nickname=data.name;
         for (i=0;i<place;i++){
             if(id===rooms[i].id){
+                for(j=0;j<rooms[i].sockets.length;j++)
+                {
+                    if(rooms[i].sockets[j].nickname===data.name){
+                        socket.emit("exists");
+                        return;
+                    }
+                }
+                socket.nickname=data.name;
                 socket.join(id);
                 rooms[i].players[socket.nickname]=0;
                 rooms[i].status[socket.nickname]=1;
@@ -85,7 +98,8 @@ io.sockets.on('connection',function(socket){
                     num:1
                 });
             }
-        }  
+        }
+        socket.emit("notFound");
     });
     console.log(rooms);
     console.log('socket connection');
