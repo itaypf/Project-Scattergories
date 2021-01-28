@@ -1,4 +1,5 @@
 const { rejects } = require('assert');
+const { SSL_OP_SSLEAY_080_CLIENT_DH_BUG } = require('constants');
 var express=require('express');
 var fs=require('fs');
 var app=express();
@@ -35,13 +36,21 @@ io.sockets.on('connection',function(socket){
     socket.input=[];
     socket_list[socket.id]=socket;
     socket.on("createRoom",function(data){
+        for(i=0;i<place;i++){
+            if(rooms[i].id===data.input){
+                socket.emit("roomExists");
+                return;
+            }
+        }
         var room={};
         room.players={};
         room.sockets=[];
+        room.status={};
         room.id=data.input;
         room.categories=data.categories
         socket.nickname=data.name
-        room.players[socket.nickname]="0";
+        room.players[socket.nickname]=0;
+        room.status[socket.nickname]=1;
         room.sockets.push(socket);
         rooms[place]=room;
         place++;
@@ -49,16 +58,26 @@ io.sockets.on('connection',function(socket){
         var clientsList = io.sockets.adapter.rooms;
         console.log(clientsList);
         socket.emit("created",{
+            status:room.status,
             num:0
         });
     });
-    socket.on("joinRoom",function(data){
+    socket.on("joinRoom",function(data){//when a player joins update the player list for all players
+        //and inform them that a player joined
         id=data.input;
-        socket.nickname=data.name;
         for (i=0;i<place;i++){
             if(id===rooms[i].id){
+                for(j=0;j<rooms[i].sockets.length;j++)
+                {
+                    if(rooms[i].sockets[j].nickname===data.name){
+                        socket.emit("exists");
+                        return;
+                    }
+                }
+                socket.nickname=data.name;
                 socket.join(id);
-                rooms[i].players[socket.nickname]="0";
+                rooms[i].players[socket.nickname]=0;
+                rooms[i].status[socket.nickname]=1;
                 rooms[i].sockets.push(socket);
                 console.log(rooms[i].sockets);
                 for(j=0;j<rooms[i].sockets.length;j++)
@@ -66,6 +85,7 @@ io.sockets.on('connection',function(socket){
                     if(rooms[i].sockets[j].id!=socket.id){
                         rooms[i].sockets[j].emit("playerJoined",{
                             players:rooms[i].players,
+                            status:rooms[i].status,
                             name:socket.nickname
                         });
                     }
@@ -78,7 +98,8 @@ io.sockets.on('connection',function(socket){
                     num:1
                 });
             }
-        }  
+        }
+        socket.emit("notFound");
     });
     console.log(rooms);
     console.log('socket connection');
@@ -102,6 +123,7 @@ io.sockets.on('connection',function(socket){
         {
             if(rooms[i].id===data.room)
             {
+                rooms[i].status=data.status;
                 for(j=0;j<rooms[i].sockets.length;j++)
                 {
                     if(rooms[i].sockets[j].nickname!==socket.nickname)
@@ -126,7 +148,25 @@ io.sockets.on('connection',function(socket){
             });
        }
     });
-    socket.on('disconnect',function(reason){
+    socket.on("update",function(data){
+        for(i=0;i<place;i++)
+        {
+            if(rooms[i].id==data.id)
+            {
+                rooms[i].status[data.name]=1;
+                rooms[i].players[socket.nickname]+=data.num
+                for(j=0;j<rooms[i].sockets.length;j++){
+                    rooms[i].sockets[j].emit("scoreboard",{
+                        players:rooms[i].players,
+                        status:rooms[i].status
+                    });
+                }
+            }
+        }
+    });
+       
+    socket.on('disconnect',function(reason){//when player leaves update the player list for everyone
+        //and inform them that a player left
         console.log('a user disconnected beacuse '+reason);
         for(i=0;i<place;i++){
             for(j=0;j<rooms[i].sockets.length;j++)
@@ -134,6 +174,7 @@ io.sockets.on('connection',function(socket){
                 if(rooms[i].sockets[j].id==socket.id){
                     var nickname=socket.nickname;
                     delete rooms[i].players[socket.nickname];
+                    delete rooms[i].status[socket.nickname];
                     rooms[i].sockets.pop(socket);
                     emitDisconnection(nickname,rooms[i]);
                     break;
@@ -147,7 +188,8 @@ function emitDisconnection(name,room){
     for(i=0;i<room.sockets.length;i++){
         room.sockets[i].emit("playerLeft",{
             name:name,
-            players:room.players
+            players:room.players,
+            status:room.status
         });
     }
 }
