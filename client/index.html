@@ -2,6 +2,7 @@
 <html>
 <title>Lets play a game</title>
 <script>
+    
     function myfunc(){
         var input=document.getElementById('roomId').value;
         var name=document.getElementById('name').value;
@@ -58,6 +59,7 @@
 <h1><ins>Welcome lets play some... </ins></h1>
 <h2><ins>Scattergories </ins></h2>
 <div id="newGAME">
+    
     <form action="/client/scattergories.html" method="GET">
         <h3>enter your nickname</h3>
     <input type="text" placeholder="enter nickname" id="name">
@@ -66,6 +68,7 @@
     <input type="text" placeholder="enter room name" id="roomId">
     <button onclick="return search()">join room</button>
     <br>
+    <div id="problem" style="color: red;font-size: 125%;"></div>
     <h2>Or</h2>
     <h3>select the categories you want to play for and create game</h3>
     <input type="checkbox" id="option1" name="option1" value="countries">
@@ -84,5 +87,22 @@
 </form>
 <p id="demo" style="color: red;"></p>
 </div>
+<script>
+    if(sessionStorage.getItem("notFound")!==null)
+    {
+        document.getElementById("problem").innerHTML="the room you are looking for does not exist you can create it or try a diffrent room name";
+        sessionStorage.removeItem("notFound");
+    }
+    else if(sessionStorage.getItem("exists")!==null)
+    {
+        document.getElementById("problem").innerHTML="the nickname you are trying to use already exists in the room please choose another";
+        sessionStorage.removeItem("exists");
+    }
+    else if(sessionStorage.getItem("roomExists")!==null)
+    {
+        document.getElementById("problem").innerHTML="the room you are trying to create already exists you can join it or create a room with a diffrent name";
+        sessionStorage.removeItem("roomExists");
+    }
+</script>
 </body>
 </html>

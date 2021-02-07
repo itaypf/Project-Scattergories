@@ -9,6 +9,7 @@
     var id=JSON.parse(sessionStorage.getItem("id"));
     var name=JSON.parse(sessionStorage.getItem("name"));
     var Pstatus={};
+    var type;
     if(list!=null)
     {
       socket.emit("createRoom",{
@@ -44,7 +45,8 @@
         room:id,
         num:1
       });
-      start_game(0);
+      type=0;
+      start_game(type);
     }
     function start_game(num){ 
       var bdy=document.getElementById('bdy');
@@ -143,6 +145,10 @@ async function roll(x,letter){
   document.getElementById('submitBut').setAttribute('onclick','return check_input()');
   var i=120;
   while(i>0){
+    socket.on("countDown",async function(data){
+      document.getElementById("report").innerHTML=data;
+      i=10;
+    });
     i--;
     await sleep(1000);
     time.innerHTML=i;
@@ -151,8 +157,8 @@ async function roll(x,letter){
       return;
     }
   }
+  document.getElementById("report").innerHTML="";
     check_input();
-    reset_game();
 }
 
 function check_input(){
@@ -162,10 +168,13 @@ function check_input(){
   for(var i=0;i<list.length;i++)
   {
     v.push(document.getElementById(list[i]));
-    if(v[i].value.charAt(0)!=letter&&v[i].value.charAt(0)!=letter.toUpperCase()){
-      v[i].style.borderColor="red";
-      document.getElementById('report').innerHTML="input doesnt match letter";
-      return false;
+    if(v.length>0&&v[i].value.length>0){
+      if(v[i].value.charAt(0)!=letter&&v[i].value.charAt(0)!=letter.toUpperCase()){//if input doesnt start with the right letter
+        //delete the value so player wont recieve points
+        v[i].style.borderColor="red";
+        v[i].value="";
+        document.getElementById("report").innerHTML="input doesnt match letter";
+      }
     }
     input.push(v[i].value);
     v[i].value="";
@@ -173,31 +182,30 @@ function check_input(){
   socket.emit('input',{
     categories:list,
     input:input,
+    id:id
   });
   document.getElementById('submitBut').setAttribute('onclick','alert("pls wait for host to roll again");')
-  reset_game();
+  reset_game(v);
   return true;
 }
-socket.on('points',function(data){//insert the points u got from the query
-        score+=data.amount;
-        update_score();
-        socket.emit("update",{
-          id:id,
-          num:data.amount,
-          name:name
-        });
-  });
-function reset_game(){
+async function reset_game(v){
   stop=-1;
-  document.getElementById('sbut').setAttribute('onclick','roll(0)');
-  
+  if(type==0)
+    document.getElementById('sbut').setAttribute('onclick','roll(0)');
   document.getElementById('letter').innerHTML="A";
+  document.getElementById('time').innerHTML=120;
+  await sleep(2000);
+  document.getElementById('report').innerHTML="";
+  for(var i=0;i<v.length;i++)
+  {
+    v[i].style.removeProperty('border');
+  }
 }
 function update_score(){
   document.getElementById("score").innerHTML="score:"+score;
 }
 socket.on("roomExists",function(data){
-  alert("the room '"+id+"' already exists you may join it or create a diffrent room");
+  sessionStorage.setItem("roomExists","room exists")
   window.location.pathname ='/';
 });
 socket.on("created",function(data){
@@ -205,11 +213,11 @@ socket.on("created",function(data){
   wait(data.num);
 });
 socket.on("exists",function(data){
-  alert("the name '"+name+"' already exists in this room pls choose another");
+  sessionStorage.setItem("exists","name exists");
   window.location.pathname ='/';
 });
 socket.on("notFound",function(data){
-  alert("no room with the name "+id+" exists");
+  sessionStorage.setItem("notFound","room not found");
   window.location.pathname ='/';
 });
 socket.on("playerJoined",async function(data){
@@ -233,7 +241,8 @@ socket.on("playerJoined",async function(data){
   document.getElementById('report').style.color="red";
 });
 socket.on("success",(data)=>{
-  wait(data.num);
+  type=data.num;
+  wait(type);
   list=data.categories;
   var names=JSON.stringify(data.players);
   names=names.replace('{','');
@@ -273,8 +282,11 @@ socket.on("begin",function(data){
 socket.on("roll",function(data){
   roll(data.num,data.letter);
 });
+
 socket.on("scoreboard",function(data){
   Pstatus=data.status;
+  score=data.players[name];
+  update_score();
   var names=JSON.stringify(data.players);
   names=names.replace('{','');
   names=names.replace('}','');
