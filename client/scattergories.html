@@ -62,10 +62,11 @@
         document.getElementById("rollButton").appendChild(roll);
       }
       var time=document.getElementById('time')
+      time.style.backgroundImage="url('https://www.pngkit.com/png/full/246-2461829_clock-empty-comments-empty-clock-icon-png.png')";
       time.innerHTML="120";
       score=0;
       var form = document.getElementsByTagName('form')[0];
-        document.getElementById("score").innerHTML="score:"+score;
+        document.getElementById("score").innerHTML="Score : "+score;
         if(list!=null){
           tableCreate(list);
           var sub=document.createElement("input");
@@ -80,7 +81,9 @@
     function tableCreate(x) {
       var form = document.getElementsByTagName('form')[0];
       var tbl = document.createElement('table');
-      tbl.style.width = '100%';
+      tbl.style.width = '70%';
+      tbl.style.marginLeft="auto";
+      tbl.style.marginRight="auto";
       tbl.setAttribute('border', '1');
       var tbdy = document.createElement('tbody');
       for (var i = 0; i < 2; i++) {
@@ -150,13 +153,19 @@ async function roll(x,letter){
       i=10;
     });
     i--;
+    if(i<=10)
+    {
+      time.style.color="red";
+    }
     await sleep(1000);
     time.innerHTML=i;
     if(stop==-1){
       time.innerHTML=120;
+      time.style.color="black";
       return;
     }
   }
+  time.style.color="black";
   document.getElementById("report").innerHTML="";
     check_input();
 }
@@ -202,7 +211,7 @@ async function reset_game(v){
   }
 }
 function update_score(){
-  document.getElementById("score").innerHTML="score:"+score;
+  document.getElementById("score").innerHTML="Score : "+score;
 }
 socket.on("roomExists",function(data){
   sessionStorage.setItem("roomExists","room exists")
@@ -282,9 +291,40 @@ socket.on("begin",function(data){
 socket.on("roll",function(data){
   roll(data.num,data.letter);
 });
+socket.on("waiting",function(data){
+  var names=JSON.stringify(data.players);
+  names=names.replace('{','');
+  names=names.replace('}','');
+  while(names.indexOf('"')!=-1)
+  {
+    names=names.replace('"','');
+  }
+  var num=0
+  cut=names.split(",");
+  names="";
+  for(i in data.status)
+  {
+    if(data.status[i]==1)
+    {
+      names+=cut[num].fontcolor("blue");
+      num++;
+      names+="<br>";
+    }
+    else{
+      names+=cut[num].fontcolor("red");
+      num++;
+      names+="<br>";
+    }
+  }
+  document.getElementById('players').innerHTML=names;
 
-socket.on("scoreboard",function(data){
+});
+socket.on("scoreboard",async function(data){
   Pstatus=data.status;
+  var num=data.players[name]-score;
+  document.getElementById("plus").innerHTML="+"+num;
+  await sleep(1500);
+  document.getElementById("plus").innerHTML=""
   score=data.players[name];
   update_score();
   var names=JSON.stringify(data.players);
@@ -301,17 +341,23 @@ socket.on("scoreboard",function(data){
   document.getElementById('players').innerHTML=names;
 });
 </script>
+<nav>
+  <a class="button1" href="index.html">Main menu</a>
+</nav>
+<br>
 <title >Scattergories</title>
-<body id="bdy" style="text-align: center;">
+<link rel="stylesheet" href="/client/stylesheet.css">
+<body id="bdy">
 <h1 id="score" style="font-size:300%;" ></h1>
+<h1 id="plus" style="font-size: 300%;" ></h1>
 <br>
 <div style="position: absolute;"></div>
-<div id="players" style="font-size: 150%; text-align: left;"></div>
-<div id="time" style="font-size: 250%; text-align: left;"></div>
-<div id='letter' style="font-size:250%;">A</div>
+<div id="time" class="clock_pic" style="font-size: 300%; float: right;position: relative; margin-left: -15%;"></div>
+<div id="players" style="font-size: 160%; text-align: left;"></div>
+<div id='letter' style="font-size:250%; ">A</div>
 <br>
 <div id="rollButton"></div>
-<form id="myform" action="/client/scattergories.html" method="GET">
+<form id="myform" action="/client/scattergories.html" method="GET" autocomplete="off">
 </form>
 <div id="report" style="color: red;"></div>
 <br>

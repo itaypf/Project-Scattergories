@@ -1,0 +1,30 @@
+body{
+    background-color: cyan;
+    text-align: center;
+}
+nav{
+    float: left;
+}
+a{
+    font-size: 150%;
+}
+a:link{
+    color: black;
+}
+a:visited{
+    color: black;
+}
+a:hover{
+    color:white;
+}
+div.clock_pic{
+    width: 150px;
+    height: 100px;
+    background-repeat: no-repeat;
+    background-size: 130px;
+    background-position-x: 10px;
+    top: -100px;
+    left: -30px;
+    padding-top: 50px;
+
+}

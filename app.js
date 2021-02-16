@@ -149,17 +149,29 @@ io.sockets.on('connection',function(socket){
                         if(rooms[i].status[j]==1)
                         {
                             status++;
-                         }
+                        }
                     }
                     if(status==1)
                     {
                         for(var k=0;k<rooms[i].sockets.length;k++)
                         {
                             if(rooms[i].sockets[k].id!==socket.id)
-                                rooms[i].sockets[k].emit("countDown",socket.nickname+" has submitted, countdown reduced to 10 seconds");
+                               rooms[i].sockets[k].emit("countDown",socket.nickname+" has submitted, countdown reduced to 10 seconds");
                         }
                     }
-                    else if(status==rooms[i].sockets.length)
+                    if(status){
+                        for(var k=0;k<rooms[i].sockets.length;k++){
+                            if(rooms[i].status[rooms[i].sockets[k].nickname]==1)
+                            {
+                                rooms[i].sockets[k].emit("waiting",{
+                                    status:rooms[i].status,
+                                    players:rooms[i].players
+                                });
+                                    
+                            }
+                        }
+                    }
+                    if(status==rooms[i].sockets.length)
                     {
                         await givePoints(rooms[i])//var i not waiting and continues to run so returned room goes into place 2
                         .then((room) => {
@@ -174,22 +186,6 @@ io.sockets.on('connection',function(socket){
                     }
                 }
             }
-    });
-    socket.on("update",function(data){//update not being recieved because client sends update when recieves points
-        //and right now points are not being received
-        for(var i=0;i<place;i++)
-        {
-            if(rooms[i].id==data.id)
-            {
-                rooms[i].players[socket.nickname]+=data.num
-                for(var j=0;j<rooms[i].sockets.length;j++){
-                    rooms[i].sockets[j].emit("scoreboard",{
-                        players:rooms[i].players,
-                        status:rooms[i].status
-                    });
-                }
-            }
-        }
     });
        
     socket.on('disconnect',function(reason){//when player leaves update the player list for everyone

@@ -1,10 +1,17 @@
 <!DOCTYPE html>
 <html>
 <title>Lets play a game</title>
+<link rel="stylesheet" href="/client/stylesheet.css">
 <script>
     
     function myfunc(){
-        var input=document.getElementById('roomId').value;
+        var input;
+        if(document.getElementById('roomId').value.length==0)
+            if(document.getElementById('createRoom').value.length>0)
+                input=document.getElementById('createRoom').value;
+            
+        else
+            input="";
         var name=document.getElementById('name').value;
         var list=new Array();
         if(document.getElementById('option1').checked)
@@ -55,52 +62,55 @@
     }
     
 </script>
-<body style="background-color: cyan; text-align: center;">
+<body>
 <h1><ins>Welcome lets play some... </ins></h1>
-<h2><ins>Scattergories </ins></h2>
+<h1><ins>Scattergories </ins></h1>
 <div id="newGAME">
-    
-    <form action="/client/scattergories.html" method="GET">
-        <h3>enter your nickname</h3>
+    <form action="/client/scattergories.html" method="GET" autocomplete="off">
+        <h3><ins>enter your nickname</ins></h3>
     <input type="text" placeholder="enter nickname" id="name">
     <br>
+    <div style="float: left;padding-left: 21%;">
+    <h2><ins>To join a room:</ins></h2>
     <br>
     <input type="text" placeholder="enter room name" id="roomId">
     <button onclick="return search()">join room</button>
-    <br>
-    <div id="problem" style="color: red;font-size: 125%;"></div>
-    <h2>Or</h2>
+    </div>
+    <div style="float: right;padding-right: 10%;">
+    <h2><ins>To create a room:</ins></h2>
+    <input type="text" placeholder="enter room name" id="createRoom">
     <h3>select the categories you want to play for and create game</h3>
-    <input type="checkbox" id="option1" name="option1" value="countries">
-    <label for="option1">countries</label>
-    <input type="checkbox" id="option2" name="option2" value="cities">
-    <label for="option2">cities</label>
-    <input type="checkbox" id="option3" name="option3" value="movies">
-    <label for="option3">movies</label>
-    <input type="checkbox" id="option4" name="option4" value="names">
-    <label for="option4">names</label>
-    <input type="checkbox" id="option5" name="option5" value="fruits&vegtables">
-    <label for="option5">fruits & vegtables</label>
+    <input type="checkbox" id="option1" name="option1" value="Countries">
+    <label for="option1">Countries</label>
+    <input type="checkbox" id="option2" name="option2" value="Cities">
+    <label for="option2">Cities</label>
+    <input type="checkbox" id="option3" name="option3" value="Movies">
+    <label for="option3">Movies</label>
+    <input type="checkbox" id="option4" name="option4" value="Names">
+    <label for="option4">Names</label>
+    <input type="checkbox" id="option5" name="option5" value="Fruits&Vegtables">
+    <label for="option5">Fruits & Vegtables</label>
     <br>
-   
-    <input type="submit" value="create game" onclick="return myfunc()">
+    <input type="submit" value="create game" style="margin-top: 5%;" onclick="return myfunc()">
+    </div>
 </form>
-<p id="demo" style="color: red;"></p>
+<br>
+<p id="demo" style="color: red; text-align: center; font-size: 150%;padding-top: 15%;"></p>
 </div>
 <script>
     if(sessionStorage.getItem("notFound")!==null)
     {
-        document.getElementById("problem").innerHTML="the room you are looking for does not exist you can create it or try a diffrent room name";
+        document.getElementById("demo").innerHTML="the room you are looking for does not exist you can create it or try a diffrent room name";
         sessionStorage.removeItem("notFound");
     }
     else if(sessionStorage.getItem("exists")!==null)
     {
-        document.getElementById("problem").innerHTML="the nickname you are trying to use already exists in the room please choose another";
+        document.getElementById("demo").innerHTML="the nickname you are trying to use already exists in the room please choose another";
         sessionStorage.removeItem("exists");
     }
     else if(sessionStorage.getItem("roomExists")!==null)
     {
-        document.getElementById("problem").innerHTML="the room you are trying to create already exists you can join it or create a room with a diffrent name";
+        document.getElementById("demo").innerHTML="the room you are trying to create already exists you can join it or create a room with a diffrent name";
         sessionStorage.removeItem("roomExists");
     }
 </script>
