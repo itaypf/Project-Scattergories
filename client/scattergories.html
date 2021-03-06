@@ -4,10 +4,16 @@
   <script src="/socket.io/socket.io.js"></script>
 <script>
   const socket=io.connect("http://localhost:8080")
+  var play=1;
     var list=new Array();
     list=JSON.parse(sessionStorage.getItem("list"));
     var id=JSON.parse(sessionStorage.getItem("id"));
     var name=JSON.parse(sessionStorage.getItem("name"));
+    var rounds=JSON.parse(sessionStorage.getItem("rounds"));
+    if(rounds!=="No Limit")
+    {
+      rounds=parseInt(rounds);
+    }
     var Pstatus={};
     var type;
     if(list!=null)
@@ -15,7 +21,8 @@
       socket.emit("createRoom",{
         input:id,
         categories:list,
-        name:name
+        name:name,
+        rounds:rounds
       })
     }
     else{
@@ -37,6 +44,7 @@
         button.setAttribute('onclick','begin()');
         button.innerHTML="start game";
         button.setAttribute('id','startGame');
+        button.setAttribute('class','btn join');
         bdy.appendChild(button);
       }
     }
@@ -58,6 +66,7 @@
         roll.setAttribute('value','roll');
         roll.setAttribute('onclick','roll(0)');
         roll.setAttribute('id','sbut');
+        roll.setAttribute('class','btn join')
         roll.setAttribute('style','margin-bottom:20px;')
         document.getElementById("rollButton").appendChild(roll);
       }
@@ -69,34 +78,43 @@
         document.getElementById("score").innerHTML="Score : "+score;
         if(list!=null){
           tableCreate(list);
+          create_divs(list);
           var sub=document.createElement("input");
           sub.setAttribute('type','button');
           sub.setAttribute('value','submit');
-          sub.setAttribute('onclick','return check_input()');
+          sub.setAttribute('onclick','alert("you must roll first")');
           sub.setAttribute('id','submitBut');
+          sub.setAttribute('class','btn join');
           sub.setAttribute('style','margin-top:20px;');
           form.appendChild(sub);
         }
     }
-    function tableCreate(x) {
+    function tableCreate(list) {
       var form = document.getElementsByTagName('form')[0];
       var tbl = document.createElement('table');
       tbl.style.width = '70%';
       tbl.style.marginLeft="auto";
       tbl.style.marginRight="auto";
       tbl.setAttribute('border', '1');
+      tbl.setAttribute('class','fl-table');
       var tbdy = document.createElement('tbody');
       for (var i = 0; i < 2; i++) {
+        if(i==0){
+          var thead=document.createElement('thead');
+          tbdy.appendChild(thead)
+        }
         var tr = document.createElement('tr');
-        for (var j = 0; j < x.length; j++) {
+        for (var j = 0; j < list.length; j++) {
           if (i == 2 && j == 1) {
             break;
           } else {
             var td = document.createElement('td');
-            i==0 ? td.appendChild(document.createTextNode(x[j])) : null;
+            i==0 ? td.appendChild(document.createTextNode(list[j])) : null;
             i == 1 && j == 1 ? td.setAttribute('rowSpan', '2') : null;
             i==1? td.appendChild(create_input(list,j)) : null;
             tr.appendChild(td);
+            if(i==0)
+              thead.appendChild(tr);
         }
     }
     tbdy.appendChild(tr);
@@ -106,68 +124,83 @@
 }
 function create_input(list,num){
   var x=document.createElement('input')
+  x.setAttribute('placeholder',list[num]);
   x.setAttribute('name',list[num]);
   x.setAttribute('id',list[num]);
   return x;
 
 }
+function create_divs(list){
+  var div=document.getElementById("scoreDiv");
+  for(var i=0;i<list.length;i++)
+  {
+    var score=document.createElement("div");
+    score.setAttribute('id',"plus");
+    div.appendChild(score);
+  }
+}
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 async function roll(x,letter){
-  stop=0;
-  var time=document.getElementById('time');
-  var div=document.getElementById('letter');
-  if(x==0){
-    for(var key in Pstatus)
-    {
-      if(Pstatus[key]==0){
-        alert("pls wait for everyone to finish submiting");
-        return;
+  if(play){
+      stop=0;
+      var time=document.getElementById('time');
+      var div=document.getElementById('letter');
+      if(x==0){
+        for(var key in Pstatus)
+        {
+          if(Pstatus[key]==0){
+            alert("pls wait for everyone to finish submiting");
+            return;
+          }
+        }
+        for(var key in Pstatus)
+        {
+          Pstatus[key]=0;
+        }
+        var num=Math.round((Math.random()*25)+65);
+        num=String.fromCharCode(num);
+        div.innerHTML=num;
+        socket.emit("roll",{
+          room:id,
+          num:1,
+          letter:num,
+          status:Pstatus
+        });
+        document.getElementById('sbut').setAttribute('onclick','');
       }
-    }
-    for(var key in Pstatus)
-    {
-      Pstatus[key]=0;
-    }
-    var num=Math.round((Math.random()*25)+65);
-    num=String.fromCharCode(num);
-    div.innerHTML=num;
-    socket.emit("roll",{
-      room:id,
-      num:1,
-      letter:num,
-      status:Pstatus
-    });
-    document.getElementById('sbut').setAttribute('onclick','');
-  }
-  else
-  {
-    div.innerHTML=letter
-  }
-  document.getElementById('submitBut').setAttribute('onclick','return check_input()');
-  var i=120;
-  while(i>0){
-    socket.on("countDown",async function(data){
-      document.getElementById("report").innerHTML=data;
-      i=10;
-    });
-    i--;
-    if(i<=10)
-    {
-      time.style.color="red";
-    }
-    await sleep(1000);
-    time.innerHTML=i;
-    if(stop==-1){
-      time.innerHTML=120;
+      else
+      {
+        div.innerHTML=letter
+      }
+      document.getElementById('submitBut').setAttribute('onclick','return check_input()');
+      var i=120;
+      while(i>0){
+        socket.on("countDown",async function(data){
+          document.getElementById("report").innerHTML=data;
+          i=10;
+        });
+        i--;
+        if(i<=10)
+        {
+          time.style.color="red";
+        }
+        await sleep(1000);
+        time.innerHTML=i;
+        if(stop==-1){
+          time.innerHTML=120;
+          time.style.color="black";
+          return;
+        }
+      }
       time.style.color="black";
-      return;
-    }
+      document.getElementById("report").innerHTML="";
+        check_input();
   }
-  time.style.color="black";
-  document.getElementById("report").innerHTML="";
-    check_input();
+  else{
+    document.getElementById('score').innerHTML="The game is over";
+  }
 }
 
 function check_input(){
@@ -195,6 +228,7 @@ function check_input(){
   });
   document.getElementById('submitBut').setAttribute('onclick','alert("pls wait for host to roll again");')
   reset_game(v);
+  document.getElementById("score").innerHTML="Waiting for everyone to submit";
   return true;
 }
 async function reset_game(v){
@@ -320,11 +354,33 @@ socket.on("waiting",function(data){
 
 });
 socket.on("scoreboard",async function(data){
+  document.getElementById("score").innerHTML="Score : "+score;
   Pstatus=data.status;
-  var num=data.players[name]-score;
-  document.getElementById("plus").innerHTML="+"+num;
-  await sleep(1500);
-  document.getElementById("plus").innerHTML=""
+  var divs=document.getElementById("plus");
+  for(var i =0;i<data.answers.length;i++)
+  {
+    divs.setAttribute("class","Column animated-score");
+    if(data.answers[i]==="")
+      divs.innerHTML="+0";
+    else if(data.answers[i]==="+"){
+      divs.innerHTML="+10";
+    }
+    else if(data.answers[i].indexOf("=")!=-1){
+    divs.innerHTML="+5";
+    }
+    else{
+      divs.innerHTML="+7";
+    }
+    divs=divs.nextElementSibling;
+  }
+  await sleep(3500);
+  var divs=document.getElementById("plus");
+  for(var i =0;i<data.answers.length;i++)
+  {
+    divs.innerHTML="";
+    divs.removeAttribute("class");
+    divs=divs.nextElementSibling;
+  }
   score=data.players[name];
   update_score();
   var names=JSON.stringify(data.players);
@@ -340,6 +396,42 @@ socket.on("scoreboard",async function(data){
   }
   document.getElementById('players').innerHTML=names;
 });
+socket.on("gameOver",function(data){
+  play=data.num;
+  var names=JSON.stringify(data.players);
+  names=names.replace('{','');
+  names=names.replace('}','');
+  while(names.indexOf('"')!=-1)
+  {
+    names=names.replace('"','');
+  }
+  while(names.indexOf(',')!=-1)
+  {
+    names=names.replace(',','<br />');
+  }
+  var end=0;
+  if(data.length>=3){
+    for(var i=0;i<3;i++)
+    {
+      end=names.indexOf(':',end);
+      end++;
+    }
+    document.getElementById("numb").innerHTML="Top 3:"
+  }
+  else if(data.length==2){
+    end=names.length;
+    document.getElementById("numb").innerHTML="Players Score:"
+  }
+  else if(data.length==1){
+    end=names.length;
+    document.getElementById("numb").innerHTML="Player Score:"
+  }
+  document.getElementById("content").innerHTML=names.substr(0,end+5);
+  document.getElementById("modal-opened").style.display="ruby";
+});
+function main_menu(){
+  window.location.pathname ='/';
+}
 </script>
 <nav>
   <a class="button1" href="index.html">Main menu</a>
@@ -348,18 +440,32 @@ socket.on("scoreboard",async function(data){
 <title >Scattergories</title>
 <link rel="stylesheet" href="/client/stylesheet.css">
 <body id="bdy">
-<h1 id="score" style="font-size:300%;" ></h1>
-<h1 id="plus" style="font-size: 300%;" ></h1>
+
+<h1 id="score" style="font-size:400%;" >  </h1>
 <br>
 <div style="position: absolute;"></div>
 <div id="time" class="clock_pic" style="font-size: 300%; float: right;position: relative; margin-left: -15%;"></div>
-<div id="players" style="font-size: 160%; text-align: left;"></div>
-<div id='letter' style="font-size:250%; ">A</div>
+<div id="players" style="font-size: 200%; text-align: left; float: left; margin-right: -30%;"></div>
+<div id='letter' style="font-size:300%; ">A</div>
 <br>
 <div id="rollButton"></div>
+<div class="modal-container" id="modal-opened">
+  <div class="modal">
+
+    <div class="modal__details">
+      <h1 class="modal__title">Game Over</h1>
+      <p class="modal__description" id="numb"></p>
+      <p class="modal__text" id="content"></p>
+    </div>
+    <button class="modal__btn" onclick="main_menu();">Ok! &rarr;</button>
+  </div>
+</div>
+<div class="table-wrapper" id="table">
+  <div class="Row" id="scoreDiv" ></div>
 <form id="myform" action="/client/scattergories.html" method="GET" autocomplete="off">
 </form>
-<div id="report" style="color: red;"></div>
+</div>
+<div id="report" style="color: red; font-size: 150%;"></div>
 <br>
 </body>
 </html>

@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
 <title>Lets play a game</title>
+<link rel="stylesheet" href="/client/fontawesome-free-5.15.2-web/css/all.css">
 <link rel="stylesheet" href="/client/stylesheet.css">
 <script>
     
@@ -14,6 +15,7 @@
             input="";
         var name=document.getElementById('name').value;
         var list=new Array();
+        var rounds=0;
         if(document.getElementById('option1').checked)
            list.push(document.getElementById('option1').value);
         if(document.getElementById('option2').checked)
@@ -24,17 +26,25 @@
             list.push(document.getElementById('option4').value);
         if(document.getElementById('option5').checked)
             list.push(document.getElementById('option5').value);
+        if(document.getElementById('rounds').value!=0)
+        {
+            rounds=document.getElementById('rounds').value;
+        }
+        else{
+            document.getElementById("demo").innerHTML="Please select amount of rounds";
+            return false;
+        }
         if(list.length<1){
-            document.getElementById("demo").innerHTML="you must select at least 1 category";
+            document.getElementById("demo").innerHTML="You must select at least 1 category";
             return false;
         }
         if(input.length<1){
-            document.getElementById("demo").innerHTML="please enter room name";
+            document.getElementById("demo").innerHTML="Please enter room name";
             return false;
         }
         if(name.length<1)
         {
-            document.getElementById("demo").innerHTML="you must enter a name for yourself";
+            document.getElementById("demo").innerHTML="You must enter a name for yourself";
             return false;
         }
         if(list.length>0)
@@ -42,18 +52,19 @@
         if(input.length>0)
             sessionStorage.setItem("id", JSON.stringify(input));
         sessionStorage.setItem("name", JSON.stringify(name));
+        sessionStorage.setItem("rounds",JSON.stringify(rounds))
         return true;
     }
     function search(){
         var input=document.getElementById('roomId').value;
         var name=document.getElementById('name').value;
         if(input.length<1){
-            document.getElementById("demo").innerHTML="please enter room name";
+            document.getElementById("demo").innerHTML="Please enter room name";
             return false;
         }
         if(name.length<1)
         {
-            document.getElementById("demo").innerHTML="you must enter a name for yourself";
+            document.getElementById("demo").innerHTML="You must enter a name for yourself";
             return false;
         }
         sessionStorage.setItem("id", JSON.stringify(input));
@@ -63,39 +74,71 @@
     
 </script>
 <body>
-<h1><ins>Welcome lets play some... </ins></h1>
-<h1><ins>Scattergories </ins></h1>
+<h1 style="font-size:280%;"><ins>Welcome lets play some... </ins></h1>
+<h1 style="font-size:250%;"><ins>Scattergories </ins></h1>
 <div id="newGAME">
-    <form action="/client/scattergories.html" method="GET" autocomplete="off">
+    <form action="/client/scattergories.html" method="GET" id="game" autocomplete="off">
         <h3><ins>enter your nickname</ins></h3>
-    <input type="text" placeholder="enter nickname" id="name">
+<label for="name" class="inp">
+<input type="text" id="name" required="required" placeholder="&nbsp;">
+<span class="label">Nickname</span>
+  <span class="focus-bg"></span>
+</label>
     <br>
-    <div style="float: left;padding-left: 21%;">
-    <h2><ins>To join a room:</ins></h2>
+    <div style="float: left;padding-left: 18%;">
+    <h2 style="font-size:200%;"><ins>To join a room:</ins></h2>
     <br>
-    <input type="text" placeholder="enter room name" id="roomId">
-    <button onclick="return search()">join room</button>
+    <label for="roomId" class="inp">
+    <input type="text" placeholder="&nbsp;" id="roomId">
+    <span class="label">enter room name</span>
+    <span class="focus-bg"></span>
+</label>
+    <button class="btn join" onclick="return search()">join room</button>
     </div>
-    <div style="float: right;padding-right: 10%;">
-    <h2><ins>To create a room:</ins></h2>
-    <input type="text" placeholder="enter room name" id="createRoom">
-    <h3>select the categories you want to play for and create game</h3>
-    <input type="checkbox" id="option1" name="option1" value="Countries">
-    <label for="option1">Countries</label>
-    <input type="checkbox" id="option2" name="option2" value="Cities">
-    <label for="option2">Cities</label>
-    <input type="checkbox" id="option3" name="option3" value="Movies">
-    <label for="option3">Movies</label>
-    <input type="checkbox" id="option4" name="option4" value="Names">
-    <label for="option4">Names</label>
-    <input type="checkbox" id="option5" name="option5" value="Fruits&Vegtables">
-    <label for="option5">Fruits & Vegtables</label>
-    <br>
-    <input type="submit" value="create game" style="margin-top: 5%;" onclick="return myfunc()">
+    <div style="float: right;padding-right: 8%;">
+    <h2 style="font-size:200%;"><ins>To create a room:</ins></h2>
+<label for="createRoom" class="inp">
+    <input type="text" placeholder="&nbsp;" id="createRoom">
+    <span class="label">enter room name</span>
+    <span class="focus-bg"></span>
+</label>
+    <h3 style="font-size:150%;"><ins>select the categories you want to play for </ins></h3>
+    <div class="categories">
+        <ul class="ks-cboxtags">
+          <li><input type="checkbox" id="option1" value="Countries">
+            <label for="option1">Countries</label>
+        </li>
+        <li><input type="checkbox" id="option2" value="Cities">
+            <label for="option2">Cities</label>
+        </li>
+        <li><input type="checkbox" id="option3" value="Movies">
+            <label for="option3">Movies</label>
+        </li>
+        <li><input type="checkbox" id="option4" value="Names">
+            <label for="option4">Names</label>
+        </li>
+        <li><input type="checkbox" id="option5" value="Fruits & Vegtables">
+            <label for="option5">Fruits & Vegtables</label>
+        </li>
+    </ul>
+    </div>
+    <label for="rounds" style="font-size: 150%;"><ins> pick amount of rounds:</ins></label>
+        <select name="rounds" id="rounds" form="game">
+            <option value="0">0</option>
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
+            <option value="6">6</option>
+            <option value="No Limit">No Limit</option>
+        </select>
+        <br>
+    <button class="btn join" onclick="return myfunc()">create room</button>
     </div>
 </form>
 <br>
-<p id="demo" style="color: red; text-align: center; font-size: 150%;padding-top: 15%;"></p>
+<p id="demo" style="color: red; text-align: center; font-size: 150%;padding-top: 28%;"></p>
 </div>
 <script>
     if(sessionStorage.getItem("notFound")!==null)
