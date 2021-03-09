@@ -85,7 +85,6 @@ io.sockets.on('connection',function(socket){
                         rooms[i].sockets[j].emit("playerJoined",{
                             players:rooms[i].players,
                             status:rooms[i].status,
-                            sockets:rooms[i].sockets,
                             name:socket.nickname
                         });
                     }
@@ -95,7 +94,6 @@ io.sockets.on('connection',function(socket){
                 return socket.emit("success",{
                     categories:rooms[i].categories,
                     players:rooms[i].players,
-                    sockets:rooms[i].sockets,
                     num:1
                 });
             }
