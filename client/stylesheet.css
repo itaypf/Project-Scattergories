@@ -499,9 +499,9 @@ div.clock_pic{
   animation: mymove 3s;
   animation-delay: 0.5s;
   position: relative;
-
 }
 @keyframes mymove{
   from{bottom: 0px;}
-  to{bottom: 235px;}
+  to{bottom: 200px;}
 }
+
