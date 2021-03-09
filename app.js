@@ -44,6 +44,7 @@ io.sockets.on('connection',function(socket){
         room.sockets=[];
         room.status={};
         room.id=data.input;
+        room.rounds=data.rounds;
         room.categories=data.categories
         socket.nickname=data.name
         room.players[socket.nickname]=0;
@@ -84,6 +85,7 @@ io.sockets.on('connection',function(socket){
                         rooms[i].sockets[j].emit("playerJoined",{
                             players:rooms[i].players,
                             status:rooms[i].status,
+                            sockets:rooms[i].sockets,
                             name:socket.nickname
                         });
                     }
@@ -93,6 +95,7 @@ io.sockets.on('connection',function(socket){
                 return socket.emit("success",{
                     categories:rooms[i].categories,
                     players:rooms[i].players,
+                    sockets:rooms[i].sockets,
                     num:1
                 });
             }
@@ -180,8 +183,20 @@ io.sockets.on('connection',function(socket){
                         for(var j=0;j<rooms[i].sockets.length;j++){
                             rooms[i].sockets[j].emit("scoreboard",{
                                 players:rooms[i].players,
+                                answers:rooms[i].sockets[j].input,
                                 status:rooms[i].status
                             });
+                        }
+                        if(rooms[i].rounds==0)
+                        {
+                            for(var j=0;j<rooms[i].sockets.length;j++)
+                            {
+                                rooms[i].sockets[j].emit("gameOver",{
+                                    length:rooms[i].sockets.length,
+                                    players:rooms[i].players,
+                                    num:0
+                                });
+                            }
                         }
                     }
                 }
@@ -255,6 +270,7 @@ async function givePoints(room){//comparing the users answers with other users a
                         if(room.sockets[k].input[j].length>0)
                         {
                             room.players[room.sockets[k].nickname]+=10;
+                            room.sockets[k].input[j]="+";
                             break;
                         }
                     }
@@ -271,6 +287,8 @@ async function givePoints(room){//comparing the users answers with other users a
                                 if(i!=k&&room.sockets[k].input[j]===room.sockets[i].input[j])
                                 {
                                     room.players[room.sockets[k].nickname]+=5;
+                                    room.sockets[k].input[j]=room.sockets[k].input[j]+"=";
+                                    room.sockets[i].input[j]=room.sockets[i].input[j]+"=";
                                     break;
                                 }
                                 else if(i+1==room.sockets.length)
@@ -282,6 +300,7 @@ async function givePoints(room){//comparing the users answers with other users a
                     }
                 }
             }
+        room.rounds--;
         resolve(room);
     });
 }
