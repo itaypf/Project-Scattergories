@@ -25,13 +25,11 @@ console.log("server started");
 var id="";
 var place=0;
 var rooms=[];
-var socket_list={};
 io.sockets.on('connection',function(socket){
     
     socket.id=Math.random();
     socket.categories=[];
     socket.input=[];
-    socket_list[socket.id]=socket;
     socket.on("createRoom",function(data){
         for(i=0;i<place;i++){
             if(rooms[i].id===data.input){
@@ -43,10 +41,11 @@ io.sockets.on('connection',function(socket){
         room.players={};
         room.sockets=[];
         room.status={};
+        room.join=1;
         room.id=data.input;
         room.rounds=data.rounds;
-        room.categories=data.categories
-        socket.nickname=data.name
+        room.categories=data.categories;
+        socket.nickname=data.name;
         room.players[socket.nickname]=0;
         room.status[socket.nickname]=1;
         room.sockets.push(socket);
@@ -66,6 +65,11 @@ io.sockets.on('connection',function(socket){
         id=data.input;
         for (i=0;i<place;i++){
             if(id===rooms[i].id){
+                if(rooms[i].join==0)
+                {
+                    socket.emit("gameStarted");
+                    return;
+                }
                 for(j=0;j<rooms[i].sockets.length;j++)
                 {
                     if(rooms[i].sockets[j].nickname===data.name){
@@ -107,6 +111,7 @@ io.sockets.on('connection',function(socket){
         {
             if(rooms[i].id===data.room)
             {
+                rooms[i].join=0;
                 for(j=0;j<rooms[i].sockets.length;j++)
                 {
                     if(rooms[i].sockets[j].nickname!==socket.nickname)
@@ -130,6 +135,26 @@ io.sockets.on('connection',function(socket){
                             num:data.num,
                             letter:data.letter
                         });
+                }
+            }
+        }
+    });
+    socket.on("sabotage",function(data){
+        for(var i=0;i<rooms.length;i++)
+        {
+            if(rooms[i].id===data.room)
+            {
+                rooms[i].players[socket.nickname]-=data.type;
+                for(var j=0;j<rooms[i].sockets.length;j++){
+                    if(rooms[i].sockets[j].nickname===data.target)
+                    {
+                        rooms[i].sockets[j].emit("sabotaged",{
+                            type:data.type
+                        });
+                    }
+                    rooms[i].sockets[j].emit("update",{
+                        players:rooms[i].players,
+                    });
                 }
             }
         }
@@ -218,11 +243,16 @@ io.sockets.on('connection',function(socket){
                         rooms.splice(i,1);
                         place--;
                     }
+                    else if(j==0)
+                    {
+                        rooms[i].sockets[j].emit("newHost",{
+                            num:0
+                        })
+                    }
                     break;
                 }
             }
         }
-        delete socket_list[socket.id];
     });
 });
 function emitDisconnection(name,room){
@@ -248,7 +278,8 @@ async function getResult(category,input){//sql query to check if answer exists i
         });
     });
 };
-async function givePoints(room){//comparing the users answers with other users and also with database
+async function givePoints(room){//comparing the users answers with database,then with other users 
+    //answers and granting points acordingly
     return new Promise(async (resolve,reject)=>   {
             for(var j=0;j<room.sockets[0].categories.length;j++){
                 var times=0;
@@ -280,20 +311,26 @@ async function givePoints(room){//comparing the users answers with other users a
                             continue;
                         else
                         {
+                            var equal=0;
                             for(i=0;i<room.sockets.length;i++)
                             {
+                                if(room.sockets[i].input[j]==="=")
+                                    continue;
                                 if(i!=k&&room.sockets[k].input[j]===room.sockets[i].input[j])
                                 {
-                                    room.players[room.sockets[k].nickname]+=5;
-                                    room.sockets[k].input[j]=room.sockets[k].input[j]+"=";
-                                    room.sockets[i].input[j]=room.sockets[i].input[j]+"=";
-                                    break;
+                                    room.players[room.sockets[i].nickname]+=5;
+                                    room.sockets[i].input[j]="=";
+                                    equal++;
+                                    
                                 }
-                                else if(i+1==room.sockets.length)
+                                if((i+1==room.sockets.length)&&(equal>0))
                                 {
-                                    room.players[room.sockets[k].nickname]+=7;
+                                    room.sockets[k].input[j]="=";
+                                    room.players[room.sockets[k].nickname]+=5;
                                 }
                             }
+                            if(room.sockets[k].input[j]!=="=")
+                                room.players[room.sockets[k].nickname]+=7;
                         }
                     }
                 }
