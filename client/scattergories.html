@@ -3,18 +3,28 @@
   
   <script src="/socket.io/socket.io.js"></script>
 <script>
-  const socket=io.connect("http://localhost:8080")
+  const socket=io.connect();
+  var play=1;
     var list=new Array();
     list=JSON.parse(sessionStorage.getItem("list"));
     var id=JSON.parse(sessionStorage.getItem("id"));
     var name=JSON.parse(sessionStorage.getItem("name"));
+    var rounds=JSON.parse(sessionStorage.getItem("rounds"));
+    var players;
+    var time_sabotage=0;
+    if(rounds!=="No Limit")
+    {
+      rounds=parseInt(rounds);
+    }
     var Pstatus={};
+    var type;
     if(list!=null)
     {
       socket.emit("createRoom",{
         input:id,
         categories:list,
-        name:name
+        name:name,
+        rounds:rounds
       })
     }
     else{
@@ -36,6 +46,7 @@
         button.setAttribute('onclick','begin()');
         button.innerHTML="start game";
         button.setAttribute('id','startGame');
+        button.setAttribute('class','btn join');
         bdy.appendChild(button);
       }
     }
@@ -44,7 +55,8 @@
         room:id,
         num:1
       });
-      start_game(0);
+      type=0;
+      start_game(type);
     }
     function start_game(num){ 
       var bdy=document.getElementById('bdy');
@@ -56,42 +68,56 @@
         roll.setAttribute('value','roll');
         roll.setAttribute('onclick','roll(0)');
         roll.setAttribute('id','sbut');
+        roll.setAttribute('class','btn join')
         roll.setAttribute('style','margin-bottom:20px;')
         document.getElementById("rollButton").appendChild(roll);
       }
       var time=document.getElementById('time')
+      time.style.backgroundImage="url('https://www.pngkit.com/png/full/246-2461829_clock-empty-comments-empty-clock-icon-png.png')";
       time.innerHTML="120";
       score=0;
       var form = document.getElementsByTagName('form')[0];
-        document.getElementById("score").innerHTML="score:"+score;
+        document.getElementById("score").innerHTML="Score : "+score;
         if(list!=null){
           tableCreate(list);
+          create_divs(list);
           var sub=document.createElement("input");
           sub.setAttribute('type','button');
           sub.setAttribute('value','submit');
-          sub.setAttribute('onclick','return check_input()');
+          sub.setAttribute('onclick','alert("you must roll first")');
           sub.setAttribute('id','submitBut');
+          sub.setAttribute('class','btn join');
           sub.setAttribute('style','margin-top:20px;');
           form.appendChild(sub);
         }
+        create_sabotage(players);
     }
-    function tableCreate(x) {
+    function tableCreate(list) {
       var form = document.getElementsByTagName('form')[0];
       var tbl = document.createElement('table');
-      tbl.style.width = '100%';
+      tbl.style.width = '70%';
+      tbl.style.marginLeft="auto";
+      tbl.style.marginRight="auto";
       tbl.setAttribute('border', '1');
+      tbl.setAttribute('class','fl-table');
       var tbdy = document.createElement('tbody');
       for (var i = 0; i < 2; i++) {
+        if(i==0){
+          var thead=document.createElement('thead');
+          tbdy.appendChild(thead)
+        }
         var tr = document.createElement('tr');
-        for (var j = 0; j < x.length; j++) {
+        for (var j = 0; j < list.length; j++) {
           if (i == 2 && j == 1) {
             break;
           } else {
             var td = document.createElement('td');
-            i==0 ? td.appendChild(document.createTextNode(x[j])) : null;
+            i==0 ? td.appendChild(document.createTextNode(list[j])) : null;
             i == 1 && j == 1 ? td.setAttribute('rowSpan', '2') : null;
             i==1? td.appendChild(create_input(list,j)) : null;
             tr.appendChild(td);
+            if(i==0)
+              thead.appendChild(tr);
         }
     }
     tbdy.appendChild(tr);
@@ -101,60 +127,171 @@
 }
 function create_input(list,num){
   var x=document.createElement('input')
+  x.setAttribute('placeholder',list[num]);
   x.setAttribute('name',list[num]);
   x.setAttribute('id',list[num]);
   return x;
+
+}
+function create_divs(list){
+  var div=document.getElementById("scoreDiv");
+  for(var i=0;i<list.length;i++)
+  {
+    var score=document.createElement("div");
+    score.setAttribute('id',"plus");
+    div.appendChild(score);
+  }
+}
+function create_sabotage(players){
+  var div=document.getElementById("sabotage");
+  div.innerHTML="Sabotage!";
+  var select=document.createElement("select");
+  select.setAttribute('class','sabotage');
+  select.setAttribute("id","target");
+  for(var i in players)
+  {
+    if(i==name)
+      continue;
+    var option=document.createElement("option");
+    option.setAttribute("value",i);
+    option.innerHTML=i;
+    select.appendChild(option);
+  }
+  if(select.children.length){
+    div.appendChild(select);
+    div.appendChild(document.getElementById("sel1"));
+    document.getElementById("sel1").style.opacity=1;
+    var button=document.createElement("button");
+    button.setAttribute('class','btn join')
+    button.setAttribute('onclick','cantYet()')
+    button.setAttribute('id','sabBut');
+    button.innerHTML="Sabotage!";
+    div.appendChild(button);
+  }
+  else{
+    delete(select);
+    div.innerHTML="";
+  }
 
 }
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 async function roll(x,letter){
-  stop=0;
-  var time=document.getElementById('time');
-  var div=document.getElementById('letter');
-  if(x==0){
-    for(var key in Pstatus)
-    {
-      if(Pstatus[key]==0){
-        alert("pls wait for everyone to finish submiting");
-        return;
+  if(play){
+      stop=0;
+      var time=document.getElementById('time');
+      var div=document.getElementById('letter');
+      if(x==0){
+        for(var key in Pstatus)
+        {
+          if(Pstatus[key]==0){
+            alert("pls wait for everyone to finish submiting");
+            return;
+          }
+        }
+        for(var key in Pstatus)
+        {
+          Pstatus[key]=0;
+        }
+        var num=Math.round((Math.random()*25)+65);
+        num=String.fromCharCode(num);
+        div.innerHTML=num;
+        socket.emit("roll",{
+          room:id,
+          num:1,
+          letter:num,
+          status:Pstatus
+        });
+        document.getElementById('sbut').setAttribute('onclick','');
+        await setLetter(num);
       }
-    }
-    for(var key in Pstatus)
-    {
-      Pstatus[key]=0;
-    }
-    var num=Math.round((Math.random()*25)+65);
-    num=String.fromCharCode(num);
-    div.innerHTML=num;
-    socket.emit("roll",{
-      room:id,
-      num:1,
-      letter:num,
-      status:Pstatus
-    });
-    document.getElementById('sbut').setAttribute('onclick','');
+      else
+      {
+        await setLetter(letter);
+      }
+      
+      document.getElementById('submitBut').setAttribute('onclick','return check_input()');
+      var i=120;
+      if(players!=null)
+        document.getElementById('sabBut').setAttribute('onclick','send_sabotage()');
+      while(i>0){
+        socket.on("countDown",async function(data){
+          document.getElementById("report").innerHTML=data;
+          i=11;
+        });
+        if(i==10)
+        {
+          time.style.color="red";
+          time.setAttribute('class','clock_pic blink');
+        }
+        if(time_sabotage==1){
+          i=30;
+          document.getElementById("time").innerHTML=30;
+          time_sabotage=0;
+        }
+        await sleep(1000);
+        i--;
+        time.innerHTML=i;
+        if(stop==-1){
+          time.innerHTML=120;
+          time.style.color="black";
+          return;
+        }
+      }
+      time.style.color="black";
+      document.getElementById("report").innerHTML="";
+        check_input();
   }
-  else
-  {
-    div.innerHTML=letter
+  else{
+    document.getElementById('score').innerHTML="The game is over";
   }
-  document.getElementById('submitBut').setAttribute('onclick','return check_input()');
-  var i=120;
-  while(i>0){
-    i--;
-    await sleep(1000);
-    time.innerHTML=i;
-    if(stop==-1){
-      time.innerHTML=120;
-      return;
-    }
-  }
-    check_input();
-    reset_game();
 }
+function setLetter(letter){
+  var theLetters = "abcdefghijklmnopqrstuvwxyz"; //You can customize what letters it will cycle through
+  var ctnt = letter; // Your text goes here
+  var speed = 50; // ms per frame
+  var increment = 8; // frames per step. Must be >2
 
+  var clen = ctnt.length;
+  var si = 0;
+  var stri = 0;
+  var block = "";
+  var fixed = "";
+  //Call self x times, whole function wrapped in setTimeout
+  (function rustle(i) {
+    setTimeout(function () {
+      if (--i) {
+        rustle(i);
+      }
+      nextFrame(i);
+      si = si + 1;
+    }, speed);
+  })(clen * increment + 1);
+  function nextFrame(pos) {
+    for (var i = 0; i < clen - stri; i++) {
+      //Random number
+      var num = Math.floor(theLetters.length * Math.random());
+      //Get random letter
+      var letter = theLetters.charAt(num);
+      block = block + letter;
+    }
+    if (si == increment - 1) {
+      stri++;
+    }
+    if (si == increment) {
+      // Add a letter;
+      // every speed*10 ms
+      fixed = fixed + ctnt.charAt(stri - 1);
+      si = 0;
+    }
+    document.getElementById("letter").innerHTML=fixed+block;
+    block="";
+  }
+}
+function cantYet(){
+  document.getElementById("report").innerHTML="you cant sabotage before the host rolls/after submitting";
+}
 function check_input(){
   var v=new Array();
   var input=new Array();
@@ -162,10 +299,14 @@ function check_input(){
   for(var i=0;i<list.length;i++)
   {
     v.push(document.getElementById(list[i]));
-    if(v[i].value.charAt(0)!=letter&&v[i].value.charAt(0)!=letter.toUpperCase()){
-      v[i].style.borderColor="red";
-      document.getElementById('report').innerHTML="input doesnt match letter";
-      return false;
+    v[i].value=v[i].value.replace(/(<([^>]+)>)/gi, "");;
+    if(v.length>0&&v[i].value.length>0){
+      if(v[i].value.charAt(0)!=letter&&v[i].value.charAt(0)!=letter.toUpperCase()){//if input doesnt start with the right letter
+        //delete the value so player wont recieve points
+        v[i].style.borderColor="red";
+        v[i].value="";
+        document.getElementById("report").innerHTML="input doesnt match letter";
+      }
     }
     input.push(v[i].value);
     v[i].value="";
@@ -173,31 +314,50 @@ function check_input(){
   socket.emit('input',{
     categories:list,
     input:input,
+    id:id
   });
+  if(players!=null)
+    document.getElementById('sabBut').setAttribute('onclick','cantYet');
   document.getElementById('submitBut').setAttribute('onclick','alert("pls wait for host to roll again");')
-  reset_game();
+  reset_game(v);
+  document.getElementById("score").innerHTML="Waiting for everyone to submit";
   return true;
 }
-socket.on('points',function(data){//insert the points u got from the query
-        score+=data.amount;
-        update_score();
-        socket.emit("update",{
-          id:id,
-          num:data.amount,
-          name:name
-        });
-  });
-function reset_game(){
+async function reset_game(v){
   stop=-1;
-  document.getElementById('sbut').setAttribute('onclick','roll(0)');
-  
+  if(type==0)
+    document.getElementById('sbut').setAttribute('onclick','roll(0)');
   document.getElementById('letter').innerHTML="A";
+  document.getElementById('time').innerHTML=120;
+  document.getElementById('time').setAttribute('class','clock_pic');
+  await sleep(2000);
+  document.getElementById('report').innerHTML="";
+  for(var i=0;i<v.length;i++)
+  {
+    v[i].style.removeProperty('border');
+  }
 }
 function update_score(){
-  document.getElementById("score").innerHTML="score:"+score;
+  document.getElementById("score").innerHTML="Score : "+score;
+}
+function send_sabotage(){
+  var target=document.getElementById("target").value;
+  var type=parseInt(document.getElementById("sel1").value);
+  if(score-type<0)
+  {
+    document.getElementById("report").innerHTML="You do not have enough points to use that sabotage";
+    return;
+  }
+  socket.emit("sabotage",{
+    target:target,
+    type:type,
+    room:id
+  });
+  score-=type;
+  update_score();
 }
 socket.on("roomExists",function(data){
-  alert("the room '"+id+"' already exists you may join it or create a diffrent room");
+  sessionStorage.setItem("roomExists","room exists")
   window.location.pathname ='/';
 });
 socket.on("created",function(data){
@@ -205,16 +365,21 @@ socket.on("created",function(data){
   wait(data.num);
 });
 socket.on("exists",function(data){
-  alert("the name '"+name+"' already exists in this room pls choose another");
+  sessionStorage.setItem("exists","name exists");
   window.location.pathname ='/';
 });
 socket.on("notFound",function(data){
-  alert("no room with the name "+id+" exists");
+  sessionStorage.setItem("notFound","room not found");
   window.location.pathname ='/';
 });
+socket.on("gameStarted",function(data){
+  sessionStorage.setItem("gameStarted","game started");
+  window.location.pathname ='/';
+})
 socket.on("playerJoined",async function(data){
   Pstatus=data.status;
   var names=JSON.stringify(data.players);
+  players=data.players;
   names=names.replace('{','');
   names=names.replace('}','');
   while(names.indexOf('"')!=-1)
@@ -233,8 +398,10 @@ socket.on("playerJoined",async function(data){
   document.getElementById('report').style.color="red";
 });
 socket.on("success",(data)=>{
-  wait(data.num);
+  type=data.num;
+  wait(type);
   list=data.categories;
+  players=data.players
   var names=JSON.stringify(data.players);
   names=names.replace('{','');
   names=names.replace('}','');
@@ -251,6 +418,7 @@ socket.on("success",(data)=>{
 });
 socket.on("playerLeft",async function(data){
   Pstatus=data.status;
+  players=data.players;
   var names=JSON.stringify(data.players);
   names=names.replace('{','');
   names=names.replace('}','');
@@ -267,14 +435,116 @@ socket.on("playerLeft",async function(data){
   await sleep(3000);
   document.getElementById('report').innerHTML="";
 });
+socket.on("newHost",function(data){
+  type=data.num;
+  if(document.getElementById("score").innerHTML==="waiting for host to start game")
+    wait(type);
+  else
+  {
+    var roll=document.createElement("input");
+    roll.setAttribute('type','button');
+    roll.setAttribute('value','roll');
+    roll.setAttribute('onclick','roll(0)');
+    roll.setAttribute('id','sbut');
+    roll.setAttribute('class','btn join')
+    roll.setAttribute('style','margin-bottom:20px;')
+        document.getElementById("rollButton").appendChild(roll);
+  }
+})
 socket.on("begin",function(data){
   start_game(data.num);
 });
 socket.on("roll",function(data){
   roll(data.num,data.letter);
 });
-socket.on("scoreboard",function(data){
+socket.on("waiting",function(data){
+  var names=JSON.stringify(data.players);
+  names=names.replace('{','');
+  names=names.replace('}','');
+  while(names.indexOf('"')!=-1)
+  {
+    names=names.replace('"','');
+  }
+  var num=0
+  cut=names.split(",");
+  names="";
+  for(i in data.status)
+  {
+    if(data.status[i]==1)
+    {
+      names+=cut[num].fontcolor("blue");
+      num++;
+      names+="<br>";
+    }
+    else{
+      names+=cut[num].fontcolor("red");
+      num++;
+      names+="<br>";
+    }
+  }
+  document.getElementById('players').innerHTML=names;
+
+});
+socket.on("sabotaged",async function(data){
+  var amount=data.type;
+  document.getElementById("report").innerHTML="Oh No! You got Sabotaged!"
+  if(amount==20){
+    document.getElementById("rollButton").style.opacity="0";
+    document.getElementById("table").style.opacity="0";
+    document.getElementById("egg").style.opacity="1";
+    await sleep(10000);
+    document.getElementById("rollButton").style.opacity="1";
+    document.getElementById("table").style.opacity="1";
+    document.getElementById("egg").style.opacity="0";
+  }
+  if(amount==30)
+  {
+    var num=Math.round((Math.random()*25)+65);
+    num=String.fromCharCode(num);
+    document.getElementById("letter").innerHTML=num;
+  }
+  if(amount==50){
+    if(document.getElementById("time").innerHTML>30)
+      time_sabotage=1;
+  }
+  await sleep(3000);
+    document.getElementById("report").innerHTML="";
+});
+socket.on("scoreboard",async function(data){
+  document.getElementById("score").innerHTML="Score : "+score;
   Pstatus=data.status;
+  var divs=document.getElementById("plus");
+  for(var i=0;i<data.answers.length;i++)
+  {
+    if(type==0)
+      divs.setAttribute("class","Column animated-score");
+    if(type==1)
+    divs.setAttribute("class","Column animated-score-1");
+    if(data.answers[i]===""){
+      divs.innerHTML="+0".fontcolor("black");
+    }
+    else if(data.answers[i]==="+"){
+      divs.innerHTML="+10".fontcolor("gold");
+    }
+    else if(data.answers[i]==="="){
+    divs.innerHTML="+5".fontcolor("bronze");
+    }
+    else{
+      divs.innerHTML="+7".fontcolor("silver");
+      
+    }
+    divs=divs.nextElementSibling;
+  }
+  await sleep(3500);
+  var divs=document.getElementById("plus");
+  for(var i =0;i<data.answers.length;i++)
+  {
+    divs.innerHTML="";
+    divs.removeAttribute("class");
+    divs=divs.nextElementSibling;
+  }
+  score=data.players[name];
+  update_score();
   var names=JSON.stringify(data.players);
   names=names.replace('{','');
   names=names.replace('}','');
@@ -288,20 +558,101 @@ socket.on("scoreboard",function(data){
   }
   document.getElementById('players').innerHTML=names;
 });
+socket.on("update",function(data){
+  var names=JSON.stringify(data.players);
+  names=names.replace('{','');
+  names=names.replace('}','');
+  while(names.indexOf('"')!=-1)
+  {
+    names=names.replace('"','');
+  }
+  while(names.indexOf(',')!=-1)
+  {
+    names=names.replace(',','<br />');
+  }
+  document.getElementById('players').innerHTML=names;
+})
+socket.on("gameOver",function(data){
+  play=data.num;
+  var names=JSON.stringify(data.players);
+  names=names.replace('{','');
+  names=names.replace('}','');
+  while(names.indexOf('"')!=-1)
+  {
+    names=names.replace('"','');
+  }
+  while(names.indexOf(',')!=-1)
+  {
+    names=names.replace(',','<br />');
+  }
+  var end=0;
+  if(data.length>=3){
+    for(var i=0;i<3;i++)
+    {
+      end=names.indexOf(':',end);
+      end++;
+    }
+    document.getElementById("numb").innerHTML="Top 3:"
+  }
+  else if(data.length==2){
+    end=names.length;
+    document.getElementById("numb").innerHTML="Players Score:"
+  }
+  else if(data.length==1){
+    end=names.length;
+    document.getElementById("numb").innerHTML="Player Score:"
+  }
+  document.getElementById("content").innerHTML=names.substr(0,end+5);
+  document.getElementById("modal-opened").style.display="ruby";
+});
+function main_menu(){
+  window.location.pathname ='/';
+}
 </script>
-<title >Scattergories</title>
-<body id="bdy" style="text-align: center;">
-<h1 id="score" style="font-size:300%;" ></h1>
+<nav>
+  <a class="button1" href="index.html">Main menu</a>
+</nav>
 <br>
-<div style="position: absolute;"></div>
-<div id="players" style="font-size: 150%; text-align: left;"></div>
-<div id="time" style="font-size: 250%; text-align: left;"></div>
-<div id='letter' style="font-size:250%;">A</div>
+<title>Scattergories</title>
+<link rel="stylesheet" href="/client/stylesheet.css">
+<body id="bdy">
+
+<h1 id="score" class="score" style="font-size:400%;" >  </h1>
 <br>
+<div id="time" class="clock_pic" style="font-size: 300%; float: right;position: relative; margin-left: -15%;"></div>
+<div id="players" style="font-size: 200%; text-align: left; float: left; margin-right: -30%;"></div>
+<div id='letter' class="score" style="font-size:300%; ">A</div>
+<br>
+<div id="sabotage" style="float: right; font-size: 250%; position: relative; margin-left: -12%;">
+</div>
+<select style="opacity: 0;" name="sabotage-option" id="sel1" class="sabotage">
+  <option value="20">egg player-20pts</option>
+  <option value="30">change letter-30pts</option>
+  <option value="50">Timedown to 30 sec-50pts</option>
+</select>
+<div>
+  <img src="broken-egg-preview.webp" alt="" id="egg" style="margin: -40%; opacity: 0; position: relative; z-index: -3;">
+</div>
 <div id="rollButton"></div>
-<form id="myform" action="/client/scattergories.html" method="GET">
+<div class="modal-container" id="modal-opened">
+  <div class="modal">
+
+    <div class="modal__details">
+      <h1 class="modal__title">Game Over</h1>
+      <p class="modal__description" id="numb"></p>
+      <p class="modal__text" id="content"></p>
+    </div>
+    <button class="modal__btn" onclick="main_menu();">Ok! &rarr;</button>
+  </div>
+</div>
+
+<div class="table-wrapper" id="table">
+  <div class="Row" id="scoreDiv" ></div>
+<form id="myform" action="/client/scattergories.html" method="GET" autocomplete="off">
 </form>
-<div id="report" style="color: red;"></div>
+</div>
+
+<div id="report" style="color: rgb(247, 172, 10); font-size: 150%;"></div>
 <br>
 </body>
 </html>

@@ -1,11 +1,38 @@
 <!DOCTYPE html>
 <html>
 <title>Lets play a game</title>
+<link rel="stylesheet" href="/client/fontawesome-free-5.15.2-web/css/all.css">
+<link rel="stylesheet" href="/client/stylesheet.css">
 <script>
+    function showJoin(){
+        document.getElementById("joinBut").style.opacity=0;
+        document.getElementById("join").style.opacity=1;
+        document.getElementById("createBut").style.opacity=1;
+        document.getElementById("create").style.opacity=0;
+        return false;
+    }
+    function showCreate(){
+        document.getElementById("createBut").style.opacity=0;
+        document.getElementById("create").style.opacity=1;
+        document.getElementById("joinBut").style.opacity=1;
+        document.getElementById("join").style.opacity=0;
+        return false;
+    }
+    
     function myfunc(){
-        var input=document.getElementById('roomId').value;
+        var input;
+        if(document.getElementById('roomId').value.length==0)
+            if(document.getElementById('createRoom').value.length>0){
+                input=document.getElementById('createRoom').value;
+               input=input.replace(/(<([^>]+)>)/gi, "");;
+            }
+        else
+            input="";
         var name=document.getElementById('name').value;
+        name=name.replace(/(<([^>]+)>)/gi, "");;
+        name=name.charAt(0).toUpperCase()+name.slice(1);
         var list=new Array();
+        var rounds=0;
         if(document.getElementById('option1').checked)
            list.push(document.getElementById('option1').value);
         if(document.getElementById('option2').checked)
@@ -16,17 +43,27 @@
             list.push(document.getElementById('option4').value);
         if(document.getElementById('option5').checked)
             list.push(document.getElementById('option5').value);
+        if(document.getElementById('option6').checked)
+            list.push(document.getElementById('option6').value);
+        if(document.getElementById('rounds').value!=0)
+        {
+            rounds=document.getElementById('rounds').value;
+        }
+        else{
+            document.getElementById("demo").innerHTML="Please select amount of rounds";
+            return false;
+        }
         if(list.length<1){
-            document.getElementById("demo").innerHTML="you must select at least 1 category";
+            document.getElementById("demo").innerHTML="You must select at least 1 category";
             return false;
         }
         if(input.length<1){
-            document.getElementById("demo").innerHTML="please enter room name";
+            document.getElementById("demo").innerHTML="Please enter room name";
             return false;
         }
         if(name.length<1)
         {
-            document.getElementById("demo").innerHTML="you must enter a name for yourself";
+            document.getElementById("demo").innerHTML="You must enter a name for yourself";
             return false;
         }
         if(list.length>0)
@@ -34,18 +71,20 @@
         if(input.length>0)
             sessionStorage.setItem("id", JSON.stringify(input));
         sessionStorage.setItem("name", JSON.stringify(name));
+        sessionStorage.setItem("rounds",JSON.stringify(rounds))
         return true;
     }
     function search(){
         var input=document.getElementById('roomId').value;
         var name=document.getElementById('name').value;
+        name=name.charAt(0).toUpperCase()+name.slice(1);
         if(input.length<1){
-            document.getElementById("demo").innerHTML="please enter room name";
+            document.getElementById("demo").innerHTML="Please enter room name";
             return false;
         }
         if(name.length<1)
         {
-            document.getElementById("demo").innerHTML="you must enter a name for yourself";
+            document.getElementById("demo").innerHTML="You must enter a name for yourself";
             return false;
         }
         sessionStorage.setItem("id", JSON.stringify(input));
@@ -54,35 +93,102 @@
     }
     
 </script>
-<body style="background-color: cyan; text-align: center;">
-<h1><ins>Welcome lets play some... </ins></h1>
-<h2><ins>Scattergories </ins></h2>
+<body>
+<h1 class="top" style="font-size:280%;">Welcome lets play some...</h1>
+<h1 class="top" style="font-size:250%;">Scattergories</h1>
 <div id="newGAME">
-    <form action="/client/scattergories.html" method="GET">
-        <h3>enter your nickname</h3>
-    <input type="text" placeholder="enter nickname" id="name">
+    <form action="/client/scattergories.html" method="GET" id="game" autocomplete="off">
+        <h3 class="top" style="font-size:200%;"><ins>Enter your nickname</ins></h3>
+<label for="name" class="inp">
+<input type="text" id="name" required="required" placeholder="&nbsp;">
+<span class="label">Nickname</span>
+  <span class="focus-bg"></span>
+</label>
     <br>
+<p id="demo" style="color: red; text-align: center; font-size: 150%; margin-bottom: -25px;"></p>
     <br>
-    <input type="text" placeholder="enter room name" id="roomId">
-    <button onclick="return search()">join room</button>
+    
+    <div id="join" style="float: left;padding-left: 8%; opacity: 0;">
+    <h2 class="top" style="font-size:200%;"><ins>To join a room:</ins></h2>
     <br>
-    <h2>Or</h2>
-    <h3>select the categories you want to play for and create game</h3>
-    <input type="checkbox" id="option1" name="option1" value="countries">
-    <label for="option1">countries</label>
-    <input type="checkbox" id="option2" name="option2" value="cities">
-    <label for="option2">cities</label>
-    <input type="checkbox" id="option3" name="option3" value="movies">
-    <label for="option3">movies</label>
-    <input type="checkbox" id="option4" name="option4" value="names">
-    <label for="option4">names</label>
-    <input type="checkbox" id="option5" name="option5" value="fruits&vegtables">
-    <label for="option5">fruits & vegtables</label>
-    <br>
+    <label for="roomId" class="inp">
+    <input type="text" placeholder="&nbsp;" id="roomId">
+    <span class="label">enter room name</span>
+    <span class="focus-bg"></span>
+</label>
+    <button class="btn join" onclick="return search()">join room</button>
+    </div>
+    
+<div id="create" style="float: right;padding-right: 5%; opacity: 0;">
+    <h2 class="top" style="font-size:200%;"><ins>To create a room:</ins></h2>
+    <label for="createRoom" class="inp">
+    <input type="text" placeholder="&nbsp;" id="createRoom">
+    <span class="label">enter room name</span>
+    <span class="focus-bg"></span>
+    </label>
+    <h3 class="top" style="font-size:150%;"><ins>select the categories you want to play for </ins></h3>
+    <div class="categories">
+        <ul class="ks-cboxtags">
+          <li><input type="checkbox" id="option1" value="Countries">
+            <label for="option1">Countries</label>
+        </li>
+        <li><input type="checkbox" id="option2" value="Cities">
+            <label for="option2">Cities</label>
+        </li>
+        <li><input type="checkbox" id="option3" value="Movies">
+            <label for="option3">Movies</label>
+        </li>
+        <li><input type="checkbox" id="option4" value="Names">
+            <label for="option4">Names</label>
+        </li>
+        <li><input type="checkbox" id="option5" value="fruits & vegetables">
+            <label for="option5">Fruits & Vegtables</label>
+        </li>
+        <li><input type="checkbox" id="option6" value="languages">
+            <label for="option6">Languages</label>
+        </li>
+    </ul>
+    </div>
+    <label class="top" for="rounds" style="font-size: 150%;"><ins> pick amount of rounds:</ins></label>
+        <select name="rounds" id="rounds" form="game">
+            <option value="0">0</option>
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
+            <option value="6">6</option>
+            <option value="No Limit">No Limit</option>
+        </select>
+        <br>
+    <button class="btn join" onclick="return myfunc()">create room</button>
+    </div>
    
-    <input type="submit" value="create game" onclick="return myfunc()">
 </form>
-<p id="demo" style="color: red;"></p>
+<button id="joinBut" style="float: left;position: relative; top:-80% ;" onclick="showJoin();" class="btn join">Join Room</button>
+<button id="createBut" style="float: left;  position: relative;top: -80%;" onclick="showCreate();"class="btn join" >create Room</button>
 </div>
+<script>
+    if(sessionStorage.getItem("notFound")!==null)
+    {
+        document.getElementById("demo").innerHTML="the room you are looking for does not exist you can create it or try a diffrent room name";
+        sessionStorage.removeItem("notFound");
+    }
+    else if(sessionStorage.getItem("exists")!==null)
+    {
+        document.getElementById("demo").innerHTML="the nickname you are trying to use already exists in the room please choose another";
+        sessionStorage.removeItem("exists");
+    }
+    else if(sessionStorage.getItem("roomExists")!==null)
+    {
+        document.getElementById("demo").innerHTML="the room you are trying to create already exists you can join it or create a room with a diffrent name";
+        sessionStorage.removeItem("roomExists");
+    }
+    else if(sessionStorage.getItem("gameStarted")!==null)
+    {
+        document.getElementById("demo").innerHTML="the room you are trying to connect to already started playing (cant join an ongoing game)";
+        sessionStorage.removeItem("gameStarted");
+    }
+</script>
 </body>
 </html>

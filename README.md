@@ -1,2 +1,3 @@
 # project-scattergories
- Scattergories
+ Scattergories <br>
+dependency: fontAwsome
