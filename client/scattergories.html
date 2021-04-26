@@ -3,13 +3,15 @@
   
   <script src="/socket.io/socket.io.js"></script>
 <script>
-  const socket=io.connect("http://localhost:8080")
+  const socket=io.connect();
   var play=1;
     var list=new Array();
     list=JSON.parse(sessionStorage.getItem("list"));
     var id=JSON.parse(sessionStorage.getItem("id"));
     var name=JSON.parse(sessionStorage.getItem("name"));
     var rounds=JSON.parse(sessionStorage.getItem("rounds"));
+    var players;
+    var time_sabotage=0;
     if(rounds!=="No Limit")
     {
       rounds=parseInt(rounds);
@@ -88,6 +90,7 @@
           sub.setAttribute('style','margin-top:20px;');
           form.appendChild(sub);
         }
+        create_sabotage(players);
     }
     function tableCreate(list) {
       var form = document.getElementsByTagName('form')[0];
@@ -139,6 +142,38 @@ function create_divs(list){
     div.appendChild(score);
   }
 }
+function create_sabotage(players){
+  var div=document.getElementById("sabotage");
+  div.innerHTML="Sabotage!";
+  var select=document.createElement("select");
+  select.setAttribute('class','sabotage');
+  select.setAttribute("id","target");
+  for(var i in players)
+  {
+    if(i==name)
+      continue;
+    var option=document.createElement("option");
+    option.setAttribute("value",i);
+    option.innerHTML=i;
+    select.appendChild(option);
+  }
+  if(select.children.length){
+    div.appendChild(select);
+    div.appendChild(document.getElementById("sel1"));
+    document.getElementById("sel1").style.opacity=1;
+    var button=document.createElement("button");
+    button.setAttribute('class','btn join')
+    button.setAttribute('onclick','cantYet()')
+    button.setAttribute('id','sabBut');
+    button.innerHTML="Sabotage!";
+    div.appendChild(button);
+  }
+  else{
+    delete(select);
+    div.innerHTML="";
+  }
+
+}
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
@@ -169,24 +204,34 @@ async function roll(x,letter){
           status:Pstatus
         });
         document.getElementById('sbut').setAttribute('onclick','');
+        await setLetter(num);
       }
       else
       {
-        div.innerHTML=letter
+        await setLetter(letter);
       }
+      
       document.getElementById('submitBut').setAttribute('onclick','return check_input()');
       var i=120;
+      if(players!=null)
+        document.getElementById('sabBut').setAttribute('onclick','send_sabotage()');
       while(i>0){
         socket.on("countDown",async function(data){
           document.getElementById("report").innerHTML=data;
-          i=10;
+          i=11;
         });
-        i--;
-        if(i<=10)
+        if(i==10)
         {
           time.style.color="red";
+          time.setAttribute('class','clock_pic blink');
+        }
+        if(time_sabotage==1){
+          i=30;
+          document.getElementById("time").innerHTML=30;
+          time_sabotage=0;
         }
         await sleep(1000);
+        i--;
         time.innerHTML=i;
         if(stop==-1){
           time.innerHTML=120;
@@ -202,7 +247,51 @@ async function roll(x,letter){
     document.getElementById('score').innerHTML="The game is over";
   }
 }
+function setLetter(letter){
+  var theLetters = "abcdefghijklmnopqrstuvwxyz"; //You can customize what letters it will cycle through
+  var ctnt = letter; // Your text goes here
+  var speed = 50; // ms per frame
+  var increment = 8; // frames per step. Must be >2
 
+  var clen = ctnt.length;
+  var si = 0;
+  var stri = 0;
+  var block = "";
+  var fixed = "";
+  //Call self x times, whole function wrapped in setTimeout
+  (function rustle(i) {
+    setTimeout(function () {
+      if (--i) {
+        rustle(i);
+      }
+      nextFrame(i);
+      si = si + 1;
+    }, speed);
+  })(clen * increment + 1);
+  function nextFrame(pos) {
+    for (var i = 0; i < clen - stri; i++) {
+      //Random number
+      var num = Math.floor(theLetters.length * Math.random());
+      //Get random letter
+      var letter = theLetters.charAt(num);
+      block = block + letter;
+    }
+    if (si == increment - 1) {
+      stri++;
+    }
+    if (si == increment) {
+      // Add a letter;
+      // every speed*10 ms
+      fixed = fixed + ctnt.charAt(stri - 1);
+      si = 0;
+    }
+    document.getElementById("letter").innerHTML=fixed+block;
+    block="";
+  }
+}
+function cantYet(){
+  document.getElementById("report").innerHTML="you cant sabotage before the host rolls/after submitting";
+}
 function check_input(){
   var v=new Array();
   var input=new Array();
@@ -210,6 +299,7 @@ function check_input(){
   for(var i=0;i<list.length;i++)
   {
     v.push(document.getElementById(list[i]));
+    v[i].value=v[i].value.replace(/(<([^>]+)>)/gi, "");;
     if(v.length>0&&v[i].value.length>0){
       if(v[i].value.charAt(0)!=letter&&v[i].value.charAt(0)!=letter.toUpperCase()){//if input doesnt start with the right letter
         //delete the value so player wont recieve points
@@ -226,6 +316,8 @@ function check_input(){
     input:input,
     id:id
   });
+  if(players!=null)
+    document.getElementById('sabBut').setAttribute('onclick','cantYet');
   document.getElementById('submitBut').setAttribute('onclick','alert("pls wait for host to roll again");')
   reset_game(v);
   document.getElementById("score").innerHTML="Waiting for everyone to submit";
@@ -237,6 +329,7 @@ async function reset_game(v){
     document.getElementById('sbut').setAttribute('onclick','roll(0)');
   document.getElementById('letter').innerHTML="A";
   document.getElementById('time').innerHTML=120;
+  document.getElementById('time').setAttribute('class','clock_pic');
   await sleep(2000);
   document.getElementById('report').innerHTML="";
   for(var i=0;i<v.length;i++)
@@ -246,6 +339,22 @@ async function reset_game(v){
 }
 function update_score(){
   document.getElementById("score").innerHTML="Score : "+score;
+}
+function send_sabotage(){
+  var target=document.getElementById("target").value;
+  var type=parseInt(document.getElementById("sel1").value);
+  if(score-type<0)
+  {
+    document.getElementById("report").innerHTML="You do not have enough points to use that sabotage";
+    return;
+  }
+  socket.emit("sabotage",{
+    target:target,
+    type:type,
+    room:id
+  });
+  score-=type;
+  update_score();
 }
 socket.on("roomExists",function(data){
   sessionStorage.setItem("roomExists","room exists")
@@ -263,9 +372,14 @@ socket.on("notFound",function(data){
   sessionStorage.setItem("notFound","room not found");
   window.location.pathname ='/';
 });
+socket.on("gameStarted",function(data){
+  sessionStorage.setItem("gameStarted","game started");
+  window.location.pathname ='/';
+})
 socket.on("playerJoined",async function(data){
   Pstatus=data.status;
   var names=JSON.stringify(data.players);
+  players=data.players;
   names=names.replace('{','');
   names=names.replace('}','');
   while(names.indexOf('"')!=-1)
@@ -287,6 +401,7 @@ socket.on("success",(data)=>{
   type=data.num;
   wait(type);
   list=data.categories;
+  players=data.players
   var names=JSON.stringify(data.players);
   names=names.replace('{','');
   names=names.replace('}','');
@@ -303,6 +418,7 @@ socket.on("success",(data)=>{
 });
 socket.on("playerLeft",async function(data){
   Pstatus=data.status;
+  players=data.players;
   var names=JSON.stringify(data.players);
   names=names.replace('{','');
   names=names.replace('}','');
@@ -319,6 +435,22 @@ socket.on("playerLeft",async function(data){
   await sleep(3000);
   document.getElementById('report').innerHTML="";
 });
+socket.on("newHost",function(data){
+  type=data.num;
+  if(document.getElementById("score").innerHTML==="waiting for host to start game")
+    wait(type);
+  else
+  {
+    var roll=document.createElement("input");
+    roll.setAttribute('type','button');
+    roll.setAttribute('value','roll');
+    roll.setAttribute('onclick','roll(0)');
+    roll.setAttribute('id','sbut');
+    roll.setAttribute('class','btn join')
+    roll.setAttribute('style','margin-bottom:20px;')
+        document.getElementById("rollButton").appendChild(roll);
+  }
+})
 socket.on("begin",function(data){
   start_game(data.num);
 });
@@ -353,23 +485,53 @@ socket.on("waiting",function(data){
   document.getElementById('players').innerHTML=names;
 
 });
+socket.on("sabotaged",async function(data){
+  var amount=data.type;
+  document.getElementById("report").innerHTML="Oh No! You got Sabotaged!"
+  if(amount==20){
+    document.getElementById("rollButton").style.opacity="0";
+    document.getElementById("table").style.opacity="0";
+    document.getElementById("egg").style.opacity="1";
+    await sleep(10000);
+    document.getElementById("rollButton").style.opacity="1";
+    document.getElementById("table").style.opacity="1";
+    document.getElementById("egg").style.opacity="0";
+  }
+  if(amount==30)
+  {
+    var num=Math.round((Math.random()*25)+65);
+    num=String.fromCharCode(num);
+    document.getElementById("letter").innerHTML=num;
+  }
+  if(amount==50){
+    if(document.getElementById("time").innerHTML>30)
+      time_sabotage=1;
+  }
+  await sleep(3000);
+    document.getElementById("report").innerHTML="";
+});
 socket.on("scoreboard",async function(data){
   document.getElementById("score").innerHTML="Score : "+score;
   Pstatus=data.status;
   var divs=document.getElementById("plus");
-  for(var i =0;i<data.answers.length;i++)
+  for(var i=0;i<data.answers.length;i++)
   {
-    divs.setAttribute("class","Column animated-score");
-    if(data.answers[i]==="")
-      divs.innerHTML="+0";
-    else if(data.answers[i]==="+"){
-      divs.innerHTML="+10";
+    if(type==0)
+      divs.setAttribute("class","Column animated-score");
+    if(type==1)
+    divs.setAttribute("class","Column animated-score-1");
+    if(data.answers[i]===""){
+      divs.innerHTML="+0".fontcolor("black");
     }
-    else if(data.answers[i].indexOf("=")!=-1){
-    divs.innerHTML="+5";
+    else if(data.answers[i]==="+"){
+      divs.innerHTML="+10".fontcolor("gold");
+    }
+    else if(data.answers[i]==="="){
+    divs.innerHTML="+5".fontcolor("bronze");
     }
     else{
-      divs.innerHTML="+7";
+      divs.innerHTML="+7".fontcolor("silver");
+      
     }
     divs=divs.nextElementSibling;
   }
@@ -396,6 +558,20 @@ socket.on("scoreboard",async function(data){
   }
   document.getElementById('players').innerHTML=names;
 });
+socket.on("update",function(data){
+  var names=JSON.stringify(data.players);
+  names=names.replace('{','');
+  names=names.replace('}','');
+  while(names.indexOf('"')!=-1)
+  {
+    names=names.replace('"','');
+  }
+  while(names.indexOf(',')!=-1)
+  {
+    names=names.replace(',','<br />');
+  }
+  document.getElementById('players').innerHTML=names;
+})
 socket.on("gameOver",function(data){
   play=data.num;
   var names=JSON.stringify(data.players);
@@ -437,17 +613,26 @@ function main_menu(){
   <a class="button1" href="index.html">Main menu</a>
 </nav>
 <br>
-<title >Scattergories</title>
+<title>Scattergories</title>
 <link rel="stylesheet" href="/client/stylesheet.css">
 <body id="bdy">
 
-<h1 id="score" style="font-size:400%;" >  </h1>
+<h1 id="score" class="score" style="font-size:400%;" >  </h1>
 <br>
-<div style="position: absolute;"></div>
 <div id="time" class="clock_pic" style="font-size: 300%; float: right;position: relative; margin-left: -15%;"></div>
 <div id="players" style="font-size: 200%; text-align: left; float: left; margin-right: -30%;"></div>
-<div id='letter' style="font-size:300%; ">A</div>
+<div id='letter' class="score" style="font-size:300%; ">A</div>
 <br>
+<div id="sabotage" style="float: right; font-size: 250%; position: relative; margin-left: -12%;">
+</div>
+<select style="opacity: 0;" name="sabotage-option" id="sel1" class="sabotage">
+  <option value="20">egg player-20pts</option>
+  <option value="30">change letter-30pts</option>
+  <option value="50">Timedown to 30 sec-50pts</option>
+</select>
+<div>
+  <img src="broken-egg-preview.webp" alt="" id="egg" style="margin: -40%; opacity: 0; position: relative; z-index: -3;">
+</div>
 <div id="rollButton"></div>
 <div class="modal-container" id="modal-opened">
   <div class="modal">
@@ -460,12 +645,14 @@ function main_menu(){
     <button class="modal__btn" onclick="main_menu();">Ok! &rarr;</button>
   </div>
 </div>
+
 <div class="table-wrapper" id="table">
   <div class="Row" id="scoreDiv" ></div>
 <form id="myform" action="/client/scattergories.html" method="GET" autocomplete="off">
 </form>
 </div>
-<div id="report" style="color: red; font-size: 150%;"></div>
+
+<div id="report" style="color: rgb(247, 172, 10); font-size: 150%;"></div>
 <br>
 </body>
 </html>
