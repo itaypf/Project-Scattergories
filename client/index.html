@@ -6,16 +6,16 @@
 <script>
     function showJoin(){
         document.getElementById("joinBut").style.opacity=0;
-        document.getElementById("join").style.opacity=1;
+        document.getElementById("join").setAttribute('class','appear');
         document.getElementById("createBut").style.opacity=1;
-        document.getElementById("create").style.opacity=0;
+        document.getElementById("create").removeAttribute('class');
         return false;
     }
     function showCreate(){
         document.getElementById("createBut").style.opacity=0;
-        document.getElementById("create").style.opacity=1;
+        document.getElementById("create").setAttribute('class','appear');
         document.getElementById("joinBut").style.opacity=1;
-        document.getElementById("join").style.opacity=0;
+        document.getElementById("join").removeAttribute('class');
         return false;
     }
     
@@ -115,7 +115,7 @@
     <input type="text" placeholder="&nbsp;" id="roomId">
     <span class="label">enter room name</span>
     <span class="focus-bg"></span>
-</label>
+    </label>
     <button class="btn join" onclick="return search()">join room</button>
     </div>
     
@@ -165,8 +165,8 @@
     </div>
    
 </form>
-<button id="joinBut" style="float: left;position: relative; top:-80% ;" onclick="showJoin();" class="btn join">Join Room</button>
-<button id="createBut" style="float: left;  position: relative;top: -80%;" onclick="showCreate();"class="btn join" >create Room</button>
+<button id="joinBut" style="float: left;position: absolute; left:30%;" onclick="showJoin();" class="btn join">Join Room</button>
+<button id="createBut" style="float: left;  position: absolute; right: 30%;" onclick="showCreate();"class="btn join" >create Room</button>
 </div>
 <script>
     if(sessionStorage.getItem("notFound")!==null)
