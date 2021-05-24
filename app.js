@@ -1,8 +1,8 @@
-const { json } = require('express');
 var express=require('express');
 var fs=require('fs');
 var app=express();
 var server=require('http').Server(app);
+var limit=require('express-limit').limit;
 var mysql=require('mysql');
 var SqlString = require('sqlstring');
 var io=require('socket.io')(server,{})
@@ -16,9 +16,13 @@ con.connect(function(err){
     if (err) throw error;
     console.log("connection established");
 });
-app.get('/',function(req,res){
+app.get('/',limit({
+ max: 60,
+ period:60*1000   
+}),function(req,res){
     res.sendFile(__dirname+'/client/index.html');
-});
+})
+;
 app.use('/client',express.static(__dirname+'/client'));
 server.listen(8080);
 console.log("server started");
