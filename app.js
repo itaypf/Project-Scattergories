@@ -17,7 +17,7 @@ con.connect(function(err){
     console.log("connection established");
 });
 app.get('/',limit({
- max: 60,
+ max: 6,
  period:60*1000   
 }),function(req,res){
     res.sendFile(__dirname+'/client/index.html');
