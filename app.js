@@ -8,9 +8,11 @@ const limit=require('express-limit').limit;
 var mysql=require('mysql');
 var SqlString = require('sqlstring');
 var io=require('socket.io')(server,{})
+var data=fs.readFileSync('Database.txt')
+console.log(data.toString());
 var con = mysql.createConnection({
   host: "localhost",
-  user: "root",
+  user: data,
   password: "",
   database: "categories"
 });
