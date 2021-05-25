@@ -1,18 +1,15 @@
 var express=require('express');
 var fs=require('fs');
 var app=express();
-var helmet = require('helmet');
-app.use(helmet());
 var server=require('http').Server(app);
 const limit=require('express-limit').limit;
 var mysql=require('mysql');
 var SqlString = require('sqlstring');
 var io=require('socket.io')(server,{})
-var data=fs.readFileSync('Database.txt')
-console.log(data.toString());
+var data=fs.readFileSync('Database.txt');
 var con = mysql.createConnection({
   host: "localhost",
-  user: data,
+  user: data.toString(),
   password: "",
   database: "categories"
 });
