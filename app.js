@@ -1,7 +1,8 @@
 var express=require('express');
 var fs=require('fs');
 var app=express();
-app.disable('x-powered-by');
+var helmet = require('helmet');
+app.use(helmet());
 var server=require('http').Server(app);
 const limit=require('express-limit').limit;
 var mysql=require('mysql');
