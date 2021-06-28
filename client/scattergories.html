@@ -6,21 +6,25 @@
   const socket=io.connect();
   var play=1;
     var list=new Array();
-    list=JSON.parse(sessionStorage.getItem("list"));
-    var id=JSON.parse(sessionStorage.getItem("id"));
-    var name=JSON.parse(sessionStorage.getItem("name"));
-    var rounds=JSON.parse(sessionStorage.getItem("rounds"));
+    list=JSON.parse(sessionStorage.getItem("list"));//getting the categories into an array
+    var id=JSON.parse(sessionStorage.getItem("id"));//getting the room name out of storage
+    var name=JSON.parse(sessionStorage.getItem("name"));//getting the playre name out of storage
+    var rounds=JSON.parse(sessionStorage.getItem("rounds"));//getting the amount of rounds out of storage
     var players;
     var time_sabotage=0;
-    if(rounds!=="No Limit")
+    sabotage=1;
+    if(rounds!=="No Limit")//if rounds is not a string saying no limit
     {
-      rounds=parseInt(rounds);
+      rounds=parseInt(rounds);//turn the number from string into integer
     }
     var Pstatus={};
     var type;
+    var good=0;
+//disable the use of enter key on this page
+window.addEventListener('keydown',function(e){if(e.keyIdentifier=='U+000A'||e.keyIdentifier=='Enter'||e.keyCode==13){if(e.target.nodeName=='INPUT'&&e.target.type=='text'){e.preventDefault();return false;}}},true);
     if(list!=null)
     {
-      socket.emit("createRoom",{
+      socket.emit("createRoom",{//emiting that i just created a room and all of its info
         input:id,
         categories:list,
         name:name,
@@ -28,7 +32,7 @@
       })
     }
     else{
-      socket.emit("joinRoom",{
+      socket.emit("joinRoom",{//emiting that i want to join said room(id) and sending my nickname
         input:id,
         name:name
       });
@@ -50,7 +54,8 @@
         bdy.appendChild(button);
       }
     }
-    function begin(){
+    function begin(){//when host presses start game it will emit to the server to start game
+      //for everyone in the room
       socket.emit("begin",{
         room:id,
         num:1
@@ -60,7 +65,6 @@
     }
     function start_game(num){ 
       var bdy=document.getElementById('bdy');
-      
       if(num==0){//creating roll button only for host
         bdy.removeChild(document.getElementById('startGame'));
         var roll=document.createElement("input");
@@ -79,20 +83,21 @@
       var form = document.getElementsByTagName('form')[0];
         document.getElementById("score").innerHTML="Score : "+score;
         if(list!=null){
-          tableCreate(list);
-          create_divs(list);
+          tableCreate(list);//function that creats the game table
+          create_divs(list);//function that creats the points display
           var sub=document.createElement("input");
           sub.setAttribute('type','button');
           sub.setAttribute('value','submit');
-          sub.setAttribute('onclick','alert("you must roll first")');
+          sub.setAttribute('onclick','alert("you must roll first")');//cant submit without rolling first
           sub.setAttribute('id','submitBut');
           sub.setAttribute('class','btn join');
           sub.setAttribute('style','margin-top:20px;');
           form.appendChild(sub);
         }
-        create_sabotage(players);
+        create_sabotage(players);//create sabotage for the game
+        check_sabotage(score);//make sure the player cant press sabotage options untill he has the needed points
     }
-    function tableCreate(list) {
+    function tableCreate(list){
       var form = document.getElementsByTagName('form')[0];
       var tbl = document.createElement('table');
       tbl.style.width = '70%';
@@ -118,13 +123,13 @@
             tr.appendChild(td);
             if(i==0)
               thead.appendChild(tr);
-        }
+            }
+          }
+        tbdy.appendChild(tr);
     }
-    tbdy.appendChild(tr);
-  }
   tbl.appendChild(tbdy);
   form.appendChild(tbl);
-}
+  }
 function create_input(list,num){
   var x=document.createElement('input')
   x.setAttribute('placeholder',list[num]);
@@ -150,14 +155,14 @@ function create_sabotage(players){
   select.setAttribute("id","target");
   for(var i in players)
   {
-    if(i==name)
+    if(i==name)//skip user name (user not gonna sabotage himself)
       continue;
-    var option=document.createElement("option");
+    var option=document.createElement("option");//create target option with name of player
     option.setAttribute("value",i);
     option.innerHTML=i;
-    select.appendChild(option);
+    select.appendChild(option);//inster the option into the select element
   }
-  if(select.children.length){
+  if(select.children.length){//if there is more then 1 player the sabotage system will appear
     div.appendChild(select);
     div.appendChild(document.getElementById("sel1"));
     document.getElementById("sel1").style.opacity=1;
@@ -168,7 +173,7 @@ function create_sabotage(players){
     button.innerHTML="Sabotage!";
     div.appendChild(button);
   }
-  else{
+  else{//if there is only one player then there is no one to sabotage (delete sabotage)
     delete(select);
     div.innerHTML="";
   }
@@ -182,7 +187,7 @@ async function roll(x,letter){
       stop=0;
       var time=document.getElementById('time');
       var div=document.getElementById('letter');
-      if(x==0){
+      if(x==0){//if host tries to roll again before everyone finished stop him
         for(var key in Pstatus)
         {
           if(Pstatus[key]==0){
@@ -190,50 +195,49 @@ async function roll(x,letter){
             return;
           }
         }
-        for(var key in Pstatus)
+        for(var key in Pstatus)//once rolled everyones status changes to not ready
         {
           Pstatus[key]=0;
         }
-        var num=Math.round((Math.random()*25)+65);
-        num=String.fromCharCode(num);
-        div.innerHTML=num;
-        socket.emit("roll",{
+        var num=Math.round((Math.random()*25)+65);//pick letter from alphabet
+        num=String.fromCharCode(num);//turn that number into letter
+        socket.emit("roll",{//emit the selected letter to every player in the room who isnt the host
           room:id,
           num:1,
           letter:num,
           status:Pstatus
         });
         document.getElementById('sbut').setAttribute('onclick','');
-        await setLetter(num);
+        await setLetter(num);//present letter to player
       }
       else
       {
         await setLetter(letter);
       }
       
-      document.getElementById('submitBut').setAttribute('onclick','return check_input()');
-      var i=120;
-      if(players!=null)
-        document.getElementById('sabBut').setAttribute('onclick','send_sabotage()');
-      while(i>0){
-        socket.on("countDown",async function(data){
+      document.getElementById('submitBut').setAttribute('onclick','return check_input()');//enable the submit button
+      var i=120;//set timer to 120 seconds
+      if(players!=null)//if there is more then one player in the room
+        document.getElementById('sabBut').setAttribute('onclick','send_sabotage()');//enable sabotage button
+      while(i>0){//while timer is above 0
+        socket.on("countDown",async function(data){//in case a player submitted the server sends a message to other players
           document.getElementById("report").innerHTML=data;
-          i=11;
+          i=11;//and lowers the timer to 10 seconds(set to 11 so it wont skip the condition below)
         });
-        if(i==10)
+        if(i==10) //if ten seconds are left
         {
-          time.style.color="red";
-          time.setAttribute('class','clock_pic blink');
+          time.style.color="red";//set the timer color to red
+          time.setAttribute('class','clock_pic blink');//and make the timer icon blink to inform of 10 seconds remaining
         }
-        if(time_sabotage==1){
-          i=30;
+        if(time_sabotage==1){//if player got timer sabotaged
+          i=30;//time set to 30 seconds
           document.getElementById("time").innerHTML=30;
           time_sabotage=0;
         }
-        await sleep(1000);
-        i--;
+        await sleep(1000);//let a second pass
+        i--;//lower timer
         time.innerHTML=i;
-        if(stop==-1){
+        if(stop==-1){//if player submitted reset timer
           time.innerHTML=120;
           time.style.color="black";
           return;
@@ -241,14 +245,14 @@ async function roll(x,letter){
       }
       time.style.color="black";
       document.getElementById("report").innerHTML="";
-        check_input();
+        check_input();//once timer reaches 0 auto submit
   }
-  else{
+  else{//if the amount of rounds reaches 0 and the host till tries to roll
     document.getElementById('score').innerHTML="The game is over";
   }
 }
 function setLetter(letter){
-  var theLetters = "abcdefghijklmnopqrstuvwxyz"; //You can customize what letters it will cycle through
+  var theLetters = "abcdefghijklmnopqrstuvwxyz";
   var ctnt = letter; // Your text goes here
   var speed = 50; // ms per frame
   var increment = 8; // frames per step. Must be >2
@@ -293,94 +297,114 @@ function cantYet(){
   document.getElementById("report").innerHTML="you cant sabotage before the host rolls/after submitting";
 }
 function check_input(){
-  var v=new Array();
+  var values=new Array();
   var input=new Array();
   var letter=document.getElementById('letter').innerHTML.toLowerCase();
   for(var i=0;i<list.length;i++)
   {
-    v.push(document.getElementById(list[i]));
-    v[i].value=v[i].value.replace(/(<([^>]+)>)/gi, "");;
-    if(v.length>0&&v[i].value.length>0){
-      if(v[i].value.charAt(0)!=letter&&v[i].value.charAt(0)!=letter.toUpperCase()){//if input doesnt start with the right letter
+    values.push(document.getElementById(list[i]));//taking the answers from all categories
+    values[i].value=values[i].value.replace(/(<([^>]+)>)/gi, "");//making sure there are no script attempts
+    if(values.length>0&&values[i].value.length>0){
+      if(values[i].value.charAt(0)!=letter&&values[i].value.charAt(0)!=letter.toUpperCase()){//if input doesnt start with the right letter
         //delete the value so player wont recieve points
-        v[i].style.borderColor="red";
-        v[i].value="";
+        values[i].style.borderColor="red";
+        values[i].value="";
         document.getElementById("report").innerHTML="input doesnt match letter";
       }
     }
-    input.push(v[i].value);
-    v[i].value="";
+    input.push(values[i].value);
+    values[i].value="";
   }
-  socket.emit('input',{
+  socket.emit('input',{//send the players answers to the server along with the categories
     categories:list,
     input:input,
     id:id
   });
-  if(players!=null)
-    document.getElementById('sabBut').setAttribute('onclick','cantYet');
   document.getElementById('submitBut').setAttribute('onclick','alert("pls wait for host to roll again");')
-  reset_game(v);
+  reset_game(values);//reset the game screen
   document.getElementById("score").innerHTML="Waiting for everyone to submit";
   return true;
 }
-async function reset_game(v){
+async function reset_game(values){
   stop=-1;
-  if(type==0)
+  if(type==0)//if its the host return the roll button to its prime function
     document.getElementById('sbut').setAttribute('onclick','roll(0)');
-  document.getElementById('letter').innerHTML="A";
-  document.getElementById('time').innerHTML=120;
+  document.getElementById('letter').innerHTML="A";//reset the letter
+  document.getElementById('time').innerHTML=120;//reset timer
   document.getElementById('time').setAttribute('class','clock_pic');
+  if(players!=null)
+    document.getElementById('sabBut').setAttribute('onclick','cantYet()');
   await sleep(2000);
   document.getElementById('report').innerHTML="";
-  for(var i=0;i<v.length;i++)
+  
+  for(var i=0;i<values.length;i++)
   {
-    v[i].style.removeProperty('border');
+    values[i].style.removeProperty('border');
   }
+  sabotage=1;
 }
 function update_score(){
   document.getElementById("score").innerHTML="Score : "+score;
+  check_sabotage(score);
+}
+function check_sabotage(score){
+  option=document.getElementById("sel1").getElementsByTagName("option");
+  for(var i=0;i<option.length;i++)
+  {
+    if(parseInt(option[i].value)>score)//checking if the user has enough points to use this sabotage
+     option[i].disabled=true;//if he doesnt keep the option disabled
+    else
+      option[i].disabled=false;//if he does enable it
+  }
 }
 function send_sabotage(){
-  var target=document.getElementById("target").value;
-  var type=parseInt(document.getElementById("sel1").value);
-  if(score-type<0)
-  {
-    document.getElementById("report").innerHTML="You do not have enough points to use that sabotage";
-    return;
+  if(sabotage>0){//players can only sabotage once per round (as to not to abuse)
+    var target=document.getElementById("target").value;//getting the selected target
+    var type=parseInt(document.getElementById("sel1").value);//and the selected sabotage
+    if(score-type<0)//making sure the player has enough points to use the sabotage
+    {
+      document.getElementById("report").innerHTML="You do not have enough points to use that sabotage";
+      return;
+    }
+    socket.emit("sabotage",{//sending sabotage to the server which then sends it to the target
+      target:target,
+      type:type,
+      room:id
+    });
+    score-=type;//remoing the points used for the sabotage
+    update_score();
+    sabotage=0;
   }
-  socket.emit("sabotage",{
-    target:target,
-    type:type,
-    room:id
-  });
-  score-=type;
-  update_score();
+  else{
+    document.getElementById("report").innerHTML="You can only sabotage once per round";
+  }
 }
-socket.on("roomExists",function(data){
-  sessionStorage.setItem("roomExists","room exists")
+socket.on("roomExists",function(data){//if room with the wanted name already exists
+  sessionStorage.setItem("roomExists",JSON.stringify(name))
+  sessionStorage.setItem("categories",JSON.stringify(list));
   window.location.pathname ='/';
 });
+socket.on("exists",function(data){//player names taken in this room
+  sessionStorage.setItem("exists",JSON.stringify(name));
+  window.location.pathname ='/';
+});
+socket.on("notFound",function(data){//room not found
+  sessionStorage.setItem("notFound",JSON.stringify(name));
+  window.location.pathname ='/';
+});
+socket.on("gameStarted",function(data){//game already started
+  sessionStorage.setItem("gameStarted",JSON.stringify(name));
+  window.location.pathname ='/';
+})
 socket.on("created",function(data){
   Pstatus=data.status;//dictionary of player status(to check if the host can roll again)
   wait(data.num);
 });
-socket.on("exists",function(data){
-  sessionStorage.setItem("exists","name exists");
-  window.location.pathname ='/';
-});
-socket.on("notFound",function(data){
-  sessionStorage.setItem("notFound","room not found");
-  window.location.pathname ='/';
-});
-socket.on("gameStarted",function(data){
-  sessionStorage.setItem("gameStarted","game started");
-  window.location.pathname ='/';
-})
-socket.on("playerJoined",async function(data){
-  Pstatus=data.status;
-  var names=JSON.stringify(data.players);
+socket.on("playerJoined",async function(data){//message sent from server to inform that a player joined
+  Pstatus=data.status;//getting the updated player status dictionary
+  var names=JSON.stringify(data.players);//getting the updated player names and score
   players=data.players;
-  names=names.replace('{','');
+  names=names.replace('{','');//removing the unneeded signs
   names=names.replace('}','');
   while(names.indexOf('"')!=-1)
   {
@@ -390,20 +414,20 @@ socket.on("playerJoined",async function(data){
   {
     names=names.replace(',','<br />');
   }
-  document.getElementById('players').innerHTML=names
+  document.getElementById('players').innerHTML=names//setting up the updated list into the player list
   document.getElementById('report').style.color="green";
-  document.getElementById('report').innerHTML="player "+data.name+" joined";
+  document.getElementById('report').innerHTML="player "+data.name+" joined";//informing that the player joined
   await sleep(3000);
   document.getElementById('report').innerHTML="";
-  document.getElementById('report').style.color="red";
+  document.getElementById('report').style.color="rgb(247, 172, 10)";
 });
 socket.on("success",(data)=>{
-  type=data.num;
-  wait(type);
-  list=data.categories;
-  players=data.players
+  type=data.num;//informing the player that he is not the host
+  wait(type);//enter wait mode for players
+  list=data.categories;//getting the rooms category list
+  players=data.players//getting the updated player names and score
   var names=JSON.stringify(data.players);
-  names=names.replace('{','');
+  names=names.replace('{','');//removing the unneeded signs
   names=names.replace('}','');
   while(names.indexOf('"')!=-1)
   {
@@ -413,12 +437,11 @@ socket.on("success",(data)=>{
   {
     names=names.replace(',','<br />');
   }
-  document.getElementById('players').innerHTML=names
-
+  document.getElementById('players').innerHTML=names//setting up the updated list into the player list
 });
-socket.on("playerLeft",async function(data){
-  Pstatus=data.status;
-  players=data.players;
+socket.on("playerLeft",async function(data){//inform the players when a player leaves the room
+  Pstatus=data.status;//getting the updated player status list
+  players=data.players;//getting the updated player list
   var names=JSON.stringify(data.players);
   names=names.replace('{','');
   names=names.replace('}','');
@@ -430,8 +453,8 @@ socket.on("playerLeft",async function(data){
   {
     names=names.replace(',','<br />');
   }
-  document.getElementById('players').innerHTML=names;
-  document.getElementById('report').innerHTML="player "+data.name+" left";
+  document.getElementById('players').innerHTML=names;//updating the player list
+  document.getElementById('report').innerHTML="player "+data.name+" left";//message of which player left
   await sleep(3000);
   document.getElementById('report').innerHTML="";
 });
@@ -457,7 +480,7 @@ socket.on("begin",function(data){
 socket.on("roll",function(data){
   roll(data.num,data.letter);
 });
-socket.on("waiting",function(data){
+socket.on("waiting",function(data){//once submitted enters waiting mode
   var names=JSON.stringify(data.players);
   names=names.replace('{','');
   names=names.replace('}','');
@@ -470,14 +493,14 @@ socket.on("waiting",function(data){
   names="";
   for(i in data.status)
   {
-    if(data.status[i]==1)
+    if(data.status[i]==1)//checking which players submitted
     {
-      names+=cut[num].fontcolor("blue");
+      names+=cut[num].fontcolor("blue");//coloring them in blue
       num++;
       names+="<br>";
     }
     else{
-      names+=cut[num].fontcolor("red");
+      names+=cut[num].fontcolor("red");//players who didnt submit yet get colored red
       num++;
       names+="<br>";
     }
@@ -485,59 +508,60 @@ socket.on("waiting",function(data){
   document.getElementById('players').innerHTML=names;
 
 });
-socket.on("sabotaged",async function(data){
+socket.on("sabotaged",async function(data){//message from the server that this player got sabotaged
   var amount=data.type;
   document.getElementById("report").innerHTML="Oh No! You got Sabotaged!"
-  if(amount==20){
-    document.getElementById("rollButton").style.opacity="0";
-    document.getElementById("table").style.opacity="0";
-    document.getElementById("egg").style.opacity="1";
-    await sleep(10000);
-    document.getElementById("rollButton").style.opacity="1";
-    document.getElementById("table").style.opacity="1";
-    document.getElementById("egg").style.opacity="0";
+  if(amount==20){//if the sabotage was the egg throw
+    document.getElementById("rollButton").style.opacity="0";//block the roll button(if host got sabotaged)
+    document.getElementById("table").style.opacity="0";//block the tables 
+    document.getElementById("egg").style.opacity="1";//egg appears on screen for 3.5 seconds
+    await sleep(3500);
+    document.getElementById("rollButton").style.opacity="1";//roll button appears again
+    document.getElementById("table").style.opacity="1";//tables appear again
+    document.getElementById("egg").style.opacity="0";//egg goes away
   }
-  if(amount==30)
+  if(amount==30)//if the sabotage was the letter change sabotage
   {
-    var num=Math.round((Math.random()*25)+65);
+    var num=Math.round((Math.random()*25)+65);//randomly pick a new letter
     num=String.fromCharCode(num);
-    document.getElementById("letter").innerHTML=num;
+    document.getElementById("letter").innerHTML=num;//put the new letter up for display
   }
-  if(amount==50){
-    if(document.getElementById("time").innerHTML>30)
-      time_sabotage=1;
+  if(amount==50){//if timer sabotaged
+    if(document.getElementById("time").innerHTML>30)//if timer is above 30 seconds
+      time_sabotage=1;//implement sabotage
   }
-  await sleep(3000);
+  await sleep(3000);//afte 3 seconds delete the oh no message
     document.getElementById("report").innerHTML="";
 });
-socket.on("scoreboard",async function(data){
-  document.getElementById("score").innerHTML="Score : "+score;
-  Pstatus=data.status;
-  var divs=document.getElementById("plus");
+socket.on("scoreboard",async function(data){//after everyone submitted the server sends to each player
+  //the updated scoreboard
+  Pstatus=data.status;//getting the updated status list
+  var divs=document.getElementById("plus");//getting the blocks where the points will appear
   for(var i=0;i<data.answers.length;i++)
   {
-    if(type==0)
+    if(type==0)//because the host has a roll button his css is diffrent
       divs.setAttribute("class","Column animated-score");
     if(type==1)
     divs.setAttribute("class","Column animated-score-1");
-    if(data.answers[i]===""){
+    if(data.answers[i]===""){//if the answer was empty then for this category the player gets 0 points
       divs.innerHTML="+0".fontcolor("black");
     }
-    else if(data.answers[i]==="+"){
+    else if(data.answers[i]==="+"){//if the answer was turned to + (which means this player was the only one who answered correctly)
+      // then for this category the player gets 10 points
       divs.innerHTML="+10".fontcolor("gold");
     }
-    else if(data.answers[i]==="="){
+    else if(data.answers[i]==="="){//if the answer was turned to =(which means the player answered the same as another player)
+      // then for this category the player gets 5 points
     divs.innerHTML="+5".fontcolor("bronze");
     }
-    else{
+    else{//in any other occasion the player will get 7 points for the category
       divs.innerHTML="+7".fontcolor("silver");
-      
     }
-    divs=divs.nextElementSibling;
+    divs=divs.nextElementSibling;//moving onto the next block
   }
   await sleep(3500);
   var divs=document.getElementById("plus");
-  for(var i =0;i<data.answers.length;i++)
+  for(var i =0;i<data.answers.length;i++)//reseting the blocks
   {
     divs.innerHTML="";
     divs.removeAttribute("class");
@@ -545,7 +569,7 @@ socket.on("scoreboard",async function(data){
   }
   score=data.players[name];
   update_score();
-  var names=JSON.stringify(data.players);
+  var names=JSON.stringify(data.players);//updating the player scores
   names=names.replace('{','');
   names=names.replace('}','');
   while(names.indexOf('"')!=-1)
@@ -558,7 +582,7 @@ socket.on("scoreboard",async function(data){
   }
   document.getElementById('players').innerHTML=names;
 });
-socket.on("update",function(data){
+socket.on("update",function(data){//after some player sabotages a score update will be sent to everyone
   var names=JSON.stringify(data.players);
   names=names.replace('{','');
   names=names.replace('}','');
@@ -572,8 +596,9 @@ socket.on("update",function(data){
   }
   document.getElementById('players').innerHTML=names;
 })
-socket.on("gameOver",function(data){
+socket.on("gameOver",function(data){//when the amount of rounds reaches 0
   play=data.num;
+  var top={};
   var names=JSON.stringify(data.players);
   names=names.replace('{','');
   names=names.replace('}','');
@@ -586,31 +611,61 @@ socket.on("gameOver",function(data){
     names=names.replace(',','<br />');
   }
   var end=0;
-  if(data.length>=3){
-    for(var i=0;i<3;i++)
+  
+  for(var i=0;i<3;i++)
+  {
+    var name="";
+    var max=0;
+    for(var j in data.players)
     {
-      end=names.indexOf(':',end);
-      end++;
+      if(max<data.players[j]&&top[j]==null){
+        max=data.players[j];
+        name=j;
+      }
     }
-    document.getElementById("numb").innerHTML="Top 3:"
+    top[name]=max;
   }
-  else if(data.length==2){
+  if(data.length>=3){//if there are 3 or more players will print out top 3 players by score
+    top=JSON.stringify(top);
+    top=top.replace('{','');
+  top=top.replace('}','');
+  while(top.indexOf('"')!=-1)
+  {
+    top=top.replace('"','');
+  }
+  while(top.indexOf(',')!=-1)
+  {
+    top=top.replace(',','<br />');
+  }
+    document.getElementById("numb").innerHTML="Top 3:"
+    end=top.length;
+    document.getElementById("content").innerHTML=top.substr(0,end+5);
+  }
+  else if(data.length==2){//will print out the 2 players scores
     end=names.length;
     document.getElementById("numb").innerHTML="Players Score:"
+    document.getElementById("content").innerHTML=names.substr(0,end+5);
   }
   else if(data.length==1){
     end=names.length;
     document.getElementById("numb").innerHTML="Player Score:"
+    document.getElementById("content").innerHTML=names.substr(0,end+5);
   }
-  document.getElementById("content").innerHTML=names.substr(0,end+5);
   document.getElementById("modal-opened").style.display="ruby";
 });
-function main_menu(){
+socket.on("disconnect",function(){
+  if(good!=1)
+    sessionStorage.setItem("crashed",JSON.stringify(name));
   window.location.pathname ='/';
+});
+function main_menu(){
+  good=1;
+  window.location.pathname ='/';//returns to index page
+  
 }
 </script>
 <nav>
-  <a class="button1" href="index.html">Main menu</a>
+  <a class="button1" href="" onclick="main_menu()">Main menu</a>
 </nav>
 <br>
 <title>Scattergories</title>
@@ -623,10 +678,10 @@ function main_menu(){
 <div id="players" style="font-size: 200%; text-align: left; float: left; margin-right: -30%;"></div>
 <div id='letter' class="score" style="font-size:300%; ">A</div>
 <br>
-<div id="sabotage" style="float: right; font-size: 250%; position: relative; margin-left: -12%;">
+<div id="sabotage" style="float: right; font-size: 250%; position: relative; margin-left: -18%;">
 </div>
 <select style="opacity: 0;" name="sabotage-option" id="sel1" class="sabotage">
-  <option value="20">egg player-20pts</option>
+  <option  value="20">egg player-20pts</option>
   <option value="30">change letter-30pts</option>
   <option value="50">Timedown to 30 sec-50pts</option>
 </select>
@@ -648,7 +703,7 @@ function main_menu(){
 
 <div class="table-wrapper" id="table">
   <div class="Row" id="scoreDiv" ></div>
-<form id="myform" action="/client/scattergories.html" method="GET" autocomplete="off">
+<form id="myform" action="/client/scattergories.html" method="POST" autocomplete="off" onkeydown="return event.key!='Enter';">
 </form>
 </div>
 

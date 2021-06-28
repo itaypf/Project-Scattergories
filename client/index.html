@@ -21,19 +21,14 @@
     
     function myfunc(){
         var input;
-        if(document.getElementById('roomId').value.length==0)
-            if(document.getElementById('createRoom').value.length>0){
-                input=document.getElementById('createRoom').value;
-               input=input.replace(/(<([^>]+)>)/gi, "");;
-            }
-        else
-            input="";
-        var name=document.getElementById('name').value;
-        name=name.replace(/(<([^>]+)>)/gi, "");;
-        name=name.charAt(0).toUpperCase()+name.slice(1);
+        input=document.getElementById('createRoom').value;//שומר את שם החדר שהשחקן רוצה ליצור
+        input=input.replace(/(<([^>]+)>)/gi, "");//מוודא שאין בו תווים זדוניים
+        var name=document.getElementById('name').value;//שומר את שם השחקן
+        name=name.replace(/(<([^>]+)>)/gi, "");//מוודא שאין בו תווים זדוניים
+        name=name.charAt(0).toUpperCase()+name.slice(1);// הפיכת האות הראשונה בשם לאות גדולה
         var list=new Array();
         var rounds=0;
-        if(document.getElementById('option1').checked)
+        if(document.getElementById('option1').checked)// בודק איזה קטגוריות המשתמש בחר ומוסיף אותם לרשימת הקטגוריות שנבחרו
            list.push(document.getElementById('option1').value);
         if(document.getElementById('option2').checked)
             list.push(document.getElementById('option2').value);
@@ -45,49 +40,49 @@
             list.push(document.getElementById('option5').value);
         if(document.getElementById('option6').checked)
             list.push(document.getElementById('option6').value);
-        if(document.getElementById('rounds').value!=0)
+        if(document.getElementById('rounds').value!=0)//מוודא שהשחקן בחר כמה סיבובים הוא רוצה לשחק
         {
             rounds=document.getElementById('rounds').value;
         }
         else{
-            document.getElementById("demo").innerHTML="Please select amount of rounds";
+            document.getElementById("demo").innerHTML="Please select amount of rounds";//אם לא בחר כמות סיבובים יידע אותו
             return false;
         }
-        if(list.length<1){
+        if(list.length<1){//אם לא בחר קטגוריות יידע אותו
             document.getElementById("demo").innerHTML="You must select at least 1 category";
             return false;
         }
-        if(input.length<1){
+        if(input.length<1){// אם לא הכניס שם לחדר יידע אותו
             document.getElementById("demo").innerHTML="Please enter room name";
             return false;
         }
-        if(name.length<1)
+        if(name.length<1)// אם לא הכניס כינוי יידע אותו
         {
             document.getElementById("demo").innerHTML="You must enter a name for yourself";
             return false;
         }
-        if(list.length>0)
-            sessionStorage.setItem("list", JSON.stringify(list));
-        if(input.length>0)
-            sessionStorage.setItem("id", JSON.stringify(input));
+        sessionStorage.setItem("list", JSON.stringify(list));//שמירה על הפרמטרים שהכניס השחקן שיעברו לעמוד הבא
+        sessionStorage.setItem("id", JSON.stringify(input));
         sessionStorage.setItem("name", JSON.stringify(name));
         sessionStorage.setItem("rounds",JSON.stringify(rounds))
         return true;
     }
     function search(){
-        var input=document.getElementById('roomId').value;
-        var name=document.getElementById('name').value;
+        var input=document.getElementById('roomId').value;//לקיחת שם החדר שהוכנס ווידוי שאין תווים זדוניים
+        input=input.replace(/(<([^>]+)>)/gi, "");
+        var name=document.getElementById('name').value;//לקיחת שם השחקן שהוכנס ווידוי שאין תווים זדוניים
+        name=name.replace(/(<([^>]+)>)/gi, "");
         name=name.charAt(0).toUpperCase()+name.slice(1);
-        if(input.length<1){
+        if(input.length<1){//אם לא הכניס שם חדר יידע את השחקן
             document.getElementById("demo").innerHTML="Please enter room name";
             return false;
         }
-        if(name.length<1)
+        if(name.length<1)//אם לא הכניס שם משתמש יידע את השחקן
         {
             document.getElementById("demo").innerHTML="You must enter a name for yourself";
             return false;
         }
-        sessionStorage.setItem("id", JSON.stringify(input));
+        sessionStorage.setItem("id", JSON.stringify(input));//שמירה על הפרמטרים שהכניס השחקן שיעברו לעמוד הבא
         sessionStorage.setItem("name", JSON.stringify(name));
         sessionStorage.removeItem("list");
     }
@@ -97,7 +92,7 @@
 <h1 class="top" style="font-size:280%;">Welcome lets play some...</h1>
 <h1 class="top" style="font-size:250%;">Scattergories</h1>
 <div id="newGAME">
-    <form action="/client/scattergories.html" method="GET" id="game" autocomplete="off">
+<form action="/client/scattergories.html" method="GET" id="game" autocomplete="off" onkeydown="return event.key!='Enter';">
         <h3 class="top" style="font-size:200%;"><ins>Enter your nickname</ins></h3>
 <label for="name" class="inp">
 <input type="text" id="name" required="required" placeholder="&nbsp;">
@@ -169,25 +164,51 @@
 <button id="createBut" style="float: left;  position: absolute; right: 30%;" onclick="showCreate();"class="btn join" >create Room</button>
 </div>
 <script>
-    if(sessionStorage.getItem("notFound")!==null)
+    if(sessionStorage.getItem("notFound")!==null)//במקרה והמשתמש הוחזר לעמוד הראשי בגלל שהחדר שחיפש לא קיים 
     {
         document.getElementById("demo").innerHTML="the room you are looking for does not exist you can create it or try a diffrent room name";
+        document.getElementById("name").value=JSON.parse(sessionStorage.getItem("notFound"))//שימור שם המשתמש שהוכנס
         sessionStorage.removeItem("notFound");
     }
-    else if(sessionStorage.getItem("exists")!==null)
+    else if(sessionStorage.getItem("exists")!==null)//במקרה שהמשתמש הוחזר לעמוד הראשי בגלל שהשם משתמש שהוא מנסה להשתמש בו תפוס
     {
         document.getElementById("demo").innerHTML="the nickname you are trying to use already exists in the room please choose another";
+        document.getElementById("name").value=JSON.parse(sessionStorage.getItem("exists"));//שימור שם המשתמש שהוכנס
+        document.getElementById("joinBut").click();//שימור החלק הפתוח שהיה בעמוד
         sessionStorage.removeItem("exists");
     }
-    else if(sessionStorage.getItem("roomExists")!==null)
+    else if(sessionStorage.getItem("roomExists")!==null)// במקרה שהמשתמש הוחזר לעמוד הראשי בגלל שהשם חדר שבו מנסה להשתמש תפוס 
     {
         document.getElementById("demo").innerHTML="the room you are trying to create already exists you can join it or create a room with a diffrent name";
+        document.getElementById("name").value=JSON.parse(sessionStorage.getItem("roomExists"));//שימור שם המשתמש שהוכנס
+        document.getElementById("createBut").click();//שימור החלק הפתוח שהיה בעמוד
+        var list=new Array();
+        list=JSON.parse(sessionStorage.getItem("categories"));
+        for(var i=0;i<list.length;i++)//שימור הקטגוריות שנבחרו
+        {
+            for(var j=1;j<=6;j++)
+            {
+                if(list[i]===document.getElementById("option"+j).value)
+                {
+                    document.getElementById("option"+j).click();
+                    break;
+                }
+            }
+        }
         sessionStorage.removeItem("roomExists");
+        sessionStorage.removeItem("categories");
     }
-    else if(sessionStorage.getItem("gameStarted")!==null)
+    else if(sessionStorage.getItem("gameStarted")!==null)//במקרה שהמשתמש הוחזר לעמוד הראשי בגלל שהמשחק שאליו ניסה להצטרף כבר התחיל
     {
         document.getElementById("demo").innerHTML="the room you are trying to connect to already started playing (cant join an ongoing game)";
+        document.getElementById("name").value=JSON.parse(sessionStorage.getItem("gameStarted"));//שימור שם המשתמש
+        document.getElementById("joinBut").click();//שימוש החלק שהיה פתוח בעמוד
         sessionStorage.removeItem("gameStarted");
+    }
+    else if(sessionStorage.getItem("crashed")!==null&&sessionStorage.getItem("good")==null){
+        document.getElementById("demo").innerHTML="the server crashed we are sorry for the inconvinence";
+        document.getElementById("name").value=JSON.parse(sessionStorage.getItem("crashed"));//שימור שם המשתמש
+        sessionStorage.removeItem("crashed");
     }
 </script>
 </body>
