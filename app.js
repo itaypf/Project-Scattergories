@@ -15,7 +15,16 @@ var encrypted=Buffer.from(data,'base64');
 encrypted=encrypted.toString('ascii');
 var password="1";
 var con;
-readline.question('password?', input=>{
+app.get('/',limit({
+    max:    60,        // 60 requests
+    period: 60 * 1000 // per minute (60 seconds)
+}),function(req,res){
+    res.sendFile(__dirname+'/client/index.html');
+});
+app.use('/client',express.static(__dirname+'/client'));
+server.listen(8080);
+console.log("server started");
+readline.question('password?\n', input=>{
     password=input;
     con = mysql.createConnection({//setting up connection to the database
         host: "localhost",
@@ -29,15 +38,6 @@ readline.question('password?', input=>{
     });
     readline.close();
 });
-app.get('/',limit({
-    max:    60,        // 60 requests
-    period: 60 * 1000 // per minute (60 seconds)
-}),function(req,res){
-    res.sendFile(__dirname+'/client/index.html');
-});
-app.use('/client',express.static(__dirname+'/client'));
-server.listen(8080);
-console.log("server started");
 var id="";
 var place=0;
 var rooms=[];
@@ -358,7 +358,7 @@ async function givePoints(room){
                     }
                 }
             }
-        room.rounds--;//lower this rooms round by 1 cause a round just ended
+        room.rounds--;//lower this rooms rounds by 1 cause a round just ended
         resolve(room);//return the changed room
     });
 }
