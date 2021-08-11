@@ -442,6 +442,8 @@ socket.on("success",(data)=>{
 socket.on("playerLeft",async function(data){//inform the players when a player leaves the room
   Pstatus=data.status;//getting the updated player status list
   players=data.players;//getting the updated player list
+  if(Object.keys(players).length==1)
+    document.getElementById("sabotage").style.opacity=0;
   var names=JSON.stringify(data.players);
   names=names.replace('{','');
   names=names.replace('}','');
@@ -454,6 +456,12 @@ socket.on("playerLeft",async function(data){//inform the players when a player l
     names=names.replace(',','<br />');
   }
   document.getElementById('players').innerHTML=names;//updating the player list
+  var select=document.getElementById("target");
+  for(i=0;i<select.length;i++)
+  {
+    if(select[i].value===data.name)
+      select.remove(i);
+  }
   document.getElementById('report').innerHTML="player "+data.name+" left";//message of which player left
   await sleep(3000);
   document.getElementById('report').innerHTML="";
